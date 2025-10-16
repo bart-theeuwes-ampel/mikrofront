@@ -1,0 +1,377 @@
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from "@angular/core";
+import { dataProvider } from "../../providers/mikrowizard/data";
+import { loginChecker } from "../../providers/login_checker";
+import { Router } from "@angular/router";
+import { formatInTimeZone } from "date-fns-tz";
+import { Network } from 'vis-network/peer';
+import { DataSet } from 'vis-data';
+
+@Component({
+  templateUrl: "maps.component.html",
+  styleUrls: ["maps.component.scss"],
+})
+export class MapsComponent implements OnInit {
+  public uid: number;
+  public uname: string;
+  public ispro: boolean = false;
+  public tz: string;
+  public savedPositions: any = {};
+  public savedPositionsKey = "network-layout";
+  public selectedDevice: any = null;
+  constructor(
+    private data_provider: dataProvider,
+    private router: Router,
+    private login_checker: loginChecker
+  ) {
+    var _self = this;
+    if (!this.login_checker.isLoggedIn()) {
+      setTimeout(function () {
+        _self.router.navigate(["login"]);
+      }, 100);
+    }
+    this.data_provider.getSessionInfo().then((res) => {
+      _self.uid = res.uid;
+      _self.uname = res.name;
+      _self.ispro = res.ISPRO;
+      if (!_self.ispro)
+        setTimeout(function () {
+          _self.router.navigate(["dashboard"]);
+        }, 100);
+      _self.tz = res.tz;
+    });
+  }
+
+  @ViewChild('network', { static: true }) networkContainer: ElementRef | undefined;
+
+  mikrotikData: any[] = [];
+
+
+
+
+  ngOnInit(): void {
+    this.loadFontAwesome();
+    this.savedPositions = JSON.parse(localStorage.getItem(this.savedPositionsKey) || "{}");
+    this.loadNetworkData();
+  }
+
+  loadNetworkData(): void {
+    this.data_provider.getNetworkMap().then((res) => {
+      this.mikrotikData = res;
+      console.dir(res);
+      setTimeout(() => {
+        this.createNetworkMap();
+      }, 100);
+    });
+  }
+
+  loadFontAwesome() {
+    if (!document.querySelector('link[href*="font-awesome"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
+      document.head.appendChild(link);
+    }
+  }
+
+createNetworkMap() {
+  const container = this.networkContainer?.nativeElement;
+  if (!container) return;
+
+  let nodes = new DataSet<any>([]);
+  let edges = new DataSet<any>([]);
+  let deviceMap: { [key: string]: string } = {}; // uniqueId to nodeId mapping
+  let allDevices: { [key: string]: any } = {};   // uniqueId to device info mapping
+  let macToDevice: { [key: string]: string } = {}; // MAC -> uniqueId mapping
+  const hasSavedPositions = Object.keys(this.savedPositions).length > 0;
+  let nodeIdCounter = 1;
+  const getUniqueId = (obj: any): string => {
+    if (obj.device_id) return `dev_${obj.device_id}`;
+    if (obj.mac) return `mac_${obj.mac}`;
+    if (obj.software_id) return `sw_${obj.software_id}`;
+    if (obj.hostname) return `host_${obj.hostname}`;
+    return `unknown_${obj.address || Math.random().toString(36).slice(2)}`;
+  };
+  // Collect all devices
+  this.mikrotikData.forEach((device) => {
+    const deviceId = device.device_id || `${device.name}_${Date.now()}`;
+
+    if (!allDevices[deviceId]) {
+      allDevices[deviceId] = {
+        name: device.name,
+        type: 'Router',
+        brand: 'MikroTik'
+      };
+    }
+
+    Object.entries(device.interfaces).forEach(([_, iface]: [string, any]) => {
+      if (iface.mac) {
+        macToDevice[iface.mac] = deviceId;
+      }
+
+      iface.neighbors.forEach((neighbor: any) => {
+        const neighborId =
+          neighbor.device_id ||
+          neighbor.software_id ||
+          `${neighbor.hostname}_${neighbor.mac}_${neighbor.address || 'unknown'}`;
+
+        if (!allDevices[neighborId]) {
+          allDevices[neighborId] = {
+            name: neighbor.hostname || neighbor.mac || 'Unknown',
+            type: neighbor.type || 'Router',
+            brand: neighbor.brand || 'MikroTik'
+          };
+        }
+
+        if (neighbor.mac) {
+          macToDevice[neighbor.mac] = neighborId;
+        }
+      });
+    });
+  });
+
+  // Create nodes
+  Object.entries(allDevices).forEach(([uniqueId, device]: [string, any]) => {
+    const nodeId = `node_${nodeIdCounter++}`;
+    deviceMap[uniqueId] = nodeId;
+
+    nodes.add({
+      id: nodeId,
+      label: device.name,
+      shape: 'image',
+      image: this.getDeviceIcon(device.type || 'Unknown', device.brand || 'Unknown'),
+      size: 15,
+      font: { size: 11, color: '#333', face: 'Arial, sans-serif' },
+      ...(hasSavedPositions && this.savedPositions[nodeId]
+        ? { x: this.savedPositions[nodeId].x, y: this.savedPositions[nodeId].y }
+        : {})
+    } as any);
+  });
+
+  // Create edges
+  this.mikrotikData.forEach((device) => {
+    Object.entries(device.interfaces).forEach(([ifaceName, iface]: [string, any]) => {
+      const sourceDeviceId = macToDevice[iface.mac];
+      iface.neighbors.forEach((neighbor: any) => {
+        const targetDeviceId = macToDevice[neighbor.mac];
+
+        if (deviceMap[sourceDeviceId] && deviceMap[targetDeviceId]) {
+          const edgeId = `${sourceDeviceId}_${targetDeviceId}`;
+          const reverseId = `${targetDeviceId}_${sourceDeviceId}`;
+
+          if (!edges.get().find(e => e.id === edgeId || e.id === reverseId)) {
+            edges.add({
+              id: edgeId,
+              from: deviceMap[sourceDeviceId],
+              to: deviceMap[targetDeviceId],
+              label: ifaceName,
+              color: { color: '#34495e', highlight: '#3498db' },
+              width: 3,
+              smooth: { type: 'continuous', roundness: 0.1 },
+              font: {
+                size: 12,
+                color: '#2c3e50',
+                face: 'Arial, sans-serif',
+                strokeWidth: 1,
+                strokeColor: '#ffffff',
+                align: 'horizontal'
+              }
+            } as any);
+          }
+        }
+      });
+    });
+  });
+
+  const data = { nodes, edges };
+  const options = { physics: { enabled: true, stabilization: { iterations: 100 }, barnesHut: { gravitationalConstant: -8000, centralGravity: 0.3, springLength: 200, springConstant: 0.04, damping: 0.09 } }, interaction: { hover: true, dragNodes: true, dragView: true, zoomView: true, hoverConnectedEdges: false, selectConnectedEdges: false, navigationButtons: false, keyboard: false }, nodes: { borderWidth: 3, shadow: true }, edges: { shadow: true, smooth: true, length: 150 }, manipulation: { enabled: false } };
+  const network = new Network(container, data, options);
+
+  // Keep your existing events (dragEnd, click, stabilization, etc.)
+  // No changes needed below
+  network.on('dragEnd', () => {
+    const positions = network.getPositions();
+    this.savedPositions = positions;
+    localStorage.setItem(this.savedPositionsKey, JSON.stringify(positions));
+  });
+
+  network.on('click', (event: any) => {
+    if (event.nodes[0]) {
+      const clickedNode = nodes.get(event.nodes[0]);
+      const canvasPosition = network.canvasToDOM(event.pointer.canvas);
+      const containerRect = container.getBoundingClientRect();
+      const mainContainer = document.querySelector('.main-container') as HTMLElement;
+      const mainRect = mainContainer?.getBoundingClientRect() || containerRect;
+
+      let adjustedX = canvasPosition.x + containerRect.left - mainRect.left + 20;
+      let adjustedY = canvasPosition.y + containerRect.top - mainRect.top - 50;
+
+      const popupWidth = 280;
+      const popupHeight = 200;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      if (adjustedX + popupWidth > viewportWidth) adjustedX -= popupWidth + 40;
+      if (adjustedY + popupHeight > viewportHeight) adjustedY -= popupHeight + 40;
+      if (adjustedX < 20) adjustedX = 20;
+      if (adjustedY < 20) adjustedY = 20;
+
+      this.handleNodeClick(clickedNode, { x: adjustedX, y: adjustedY });
+    }
+  });
+
+  network.on('stabilizationIterationsDone', () => {
+    network.fit();
+    if (!hasSavedPositions) {
+      const positions = network.getPositions();
+      this.savedPositions = positions;
+      localStorage.setItem(this.savedPositionsKey, JSON.stringify(positions));
+    }
+  });
+
+  if (hasSavedPositions) {
+    setTimeout(() => network.fit(), 500);
+  }
+}
+
+  handleNodeClick(node: any, position?: { x: number, y: number }) {
+    this.selectedDevice = node;
+    if (position) {
+      this.selectedDevice.popupPosition = position;
+    }
+  }
+
+  closeDeviceDetails() {
+    this.selectedDevice = null;
+  }
+
+  getDeviceInterfaces() {
+    if (!this.selectedDevice) return [];
+    
+    const device = this.mikrotikData.find(d => d.name === this.selectedDevice.label);
+    if (!device) return [];
+    
+    return Object.entries(device.interfaces).map(([name, data]: [string, any]) => ({
+      name,
+      address: data.address,
+      mac: data.mac
+    }));
+  }
+
+  getNodeColor(deviceType: string): string {
+    const colors = {
+      'gateway': '#dc3545',
+      'router': '#fd7e14',
+      'switch': '#6f42c1',
+      'ap': '#20c997',
+      'cpe': '#0dcaf0'
+    };
+    return (colors as any)[deviceType] || '#6c757d';
+  }
+
+  getNodeBorderColor(deviceType: string): string {
+    const borderColors = {
+      'gateway': '#b02a37',
+      'router': '#e8681a',
+      'switch': '#59359a',
+      'ap': '#1aa179',
+      'cpe': '#0baccc'
+    };
+    return (borderColors as any)[deviceType] || '#495057';
+  }
+
+  getDeviceIcon(deviceType: string, brand: string): string {
+    const basePath = './assets/Network-Icons-SVG/';
+    const type = deviceType.toLowerCase();
+    const brandName = brand.toLowerCase();
+    
+    // MikroTik devices
+    if (brandName === 'mikrotik') {
+      if (type === 'switch') {
+        return `${basePath}cumulus-switch-v2.svg`;
+      }
+      return `${basePath}cumulus-router-v2.svg`;
+    }
+    
+    // Cisco devices
+    if (brandName === 'cisco') {
+      if (type === 'switch') {
+        return `${basePath}cisco-switch-l2.svg`;
+      }
+      return `${basePath}cisco-router.svg`;
+    }
+    
+    // Juniper devices
+    if (brandName === 'juniper') {
+      if (type === 'switch') {
+        return `${basePath}juniper-switch-l2.svg`;
+      }
+      return `${basePath}juniper-router.svg`;
+    }
+    
+    // HPE/Aruba devices
+    if (brandName === 'hpe/aruba' || brandName === 'aruba' || brandName === 'hpe') {
+      if (type === 'server') {
+        return `${basePath}generic-server-1.svg`;
+      }
+      return `${basePath}arista-switch.svg`;
+    }
+    
+    // Ubiquiti devices
+    if (brandName === 'ubiquiti' || brandName === 'ubnt') {
+      if (type === 'switch') {
+        return `${basePath}generic-switch-l2-v1-colour.svg`;
+      }
+      return `${basePath}generic-router-colour.svg`;
+    }
+    
+    // Default icons by type
+    const defaultIcons = {
+      'switch': `${basePath}generic-switch-l2-v1-colour.svg`,
+      'router': `${basePath}generic-router-colour.svg`,
+      'router/switch': `${basePath}generic-router-colour.svg`,
+      'server': `${basePath}generic-server-1.svg`,
+      'unknown': `${basePath}generic-router-colour.svg`
+    };
+    
+    return (defaultIcons as any)[type] || `${basePath}generic-router-colour.svg`;
+  }
+
+  getDefaultPosition(deviceName: string, index: number): { x: number, y: number } {
+    const positions = {
+      'Core Router': { x: 0, y: 0 },
+      'Edge Router': { x: -200, y: -100 },
+      'Distribution Switch': { x: 200, y: -100 },
+      'Access Point 1': { x: 100, y: 100 },
+      'Access Point 2': { x: 300, y: 100 },
+      'Customer Router 1': { x: 0, y: 200 },
+      'Customer Router 2': { x: 200, y: 200 }
+    };
+    return (positions as any)[deviceName] || { x: index * 100, y: index * 50 };
+  }
+
+  webAccess() {
+    if (!this.selectedDevice) return;
+    const device = this.mikrotikData.find(d => d.name === this.selectedDevice.label);
+    if (device) {
+      const firstInterface = Object.values(device.interfaces)[0] as any;
+      const ip = firstInterface.address.split('/')[0];
+      window.open(`http://${ip}`, '_blank');
+    }
+  }
+
+  showMoreInfo() {
+    console.log('More info for:', this.selectedDevice);
+    // Implement modal or detailed view
+  }
+
+  pingDevice() {
+    console.log('Ping device:', this.selectedDevice);
+    // Implement ping functionality
+  }
+
+  configureDevice() {
+    console.log('Configure device:', this.selectedDevice);
+    // Implement configuration interface
+  }
+
+}

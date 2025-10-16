@@ -50,6 +50,11 @@ const routes: Routes = [
           import('./views/devices_group/devgroup.module').then((m) => m.DevicesGroupModule)
       },
       {
+        path: 'maps',
+        loadChildren: () =>
+          import('./views/maps/maps.module').then((m) => m.MapsModule)
+      },
+      {
         path: 'authlog',
         loadChildren: () =>
           import('./views/auth_log/auth.module').then((m) => m.AuthModule)

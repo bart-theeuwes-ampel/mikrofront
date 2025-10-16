@@ -1,0 +1,82 @@
+<c-row class="network-container">
+  <c-col [xs]="12" class="network-col">
+    <c-card class="network-card">
+      <button cButton color="primary" size="sm" (click)="refreshData()" class="refresh-btn">
+        <i class="fas fa-sync-alt"></i> Refresh
+      </button>
+      <div #network class="network-canvas"></div>
+    </c-card>
+  </c-col>
+</c-row>
+
+<div *ngIf="selectedDevice" class="floating-sidebar" [ngStyle]="{
+  'left.px': selectedDevice.popupPosition?.x || 20,
+  'top.px': selectedDevice.popupPosition?.y || 20
+}">
+  <div class="device-panel">
+    <div class="panel-header">
+      <span class="device-name">{{ selectedDevice.label }}</span>
+      <button cButton variant="ghost" size="sm" (click)="closeDeviceDetails()" class="close-btn">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="panel-content">
+      <div class="device-info">
+        <div><small><strong>Type:</strong> {{getDeviceInfo()?.type}} ({{getDeviceInfo()?.brand}})</small></div>
+        <div><small><strong>Board:</strong> {{getDeviceInfo()?.board}}</small></div>
+        <div><small><strong>Version:</strong> {{getDeviceInfo()?.version}}</small></div>
+        <div *ngIf="getDeviceInfo()?.systemDescription"><small><strong>System:</strong> {{getDeviceInfo()?.systemDescription}}</small></div>
+        <div><small><strong>IP:</strong> {{getPrimaryIP()}}</small></div>
+        <div><small><strong>Neighbors:</strong> {{getNeighborCount()}}</small></div>
+      </div>
+      
+      <div class="interfaces-section">
+        <div *ngFor="let interface of getDeviceInterfaces()" class="interface-row">
+          <div class="if-header">
+            <span class="if-name">{{ interface.name }}</span>
+            <span class="if-neighbors">({{ interface.neighbors }} neighbors)</span>
+          </div>
+          <span class="if-ip">{{ interface.address }}</span>
+        </div>
+      </div>
+      
+      <div class="actions-section">
+        <button cButton color="primary" size="sm" (click)="webAccess()" class="compact-btn">
+          <i class="fas fa-globe"></i> Web
+        </button>
+        <button *ngIf="getDeviceInfo()?.deviceId" cButton color="info" size="sm" (click)="showMoreInfo()" class="compact-btn">
+          <i class="fas fa-info-circle"></i> Info
+        </button>
+        <!-- <button cButton color="success" size="sm" (click)="pingDevice(getDeviceInfo()?.deviceId)" class="compact-btn">
+          <i class="fas fa-play"></i> Ping
+        </button>
+        <button cButton color="warning" size="sm" (click)="configureDevice(getDeviceInfo()?.deviceId)" class="compact-btn">
+          <i class="fas fa-cog"></i> Config
+        </button> -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Web Access Modal -->
+<c-modal #WebAccessModal backdrop="static" [(visible)]="showWebAccessModal" id="WebAccessModal">
+  <c-modal-header>
+    <h6 cModalTitle>Web Access Options</h6>
+    <button cButtonClose (click)="closeWebAccessModal()"></button>
+  </c-modal-header>
+  <c-modal-body>
+    <p>Choose how to access the device:</p>
+    <div class="d-grid gap-2">
+      <button *ngIf="ispro" cButton color="primary" (click)="openProxyAccess()">
+        <i class="fas fa-shield-alt"></i> Proxy Access , through Mikrowizard server
+      </button>
+      <button cButton color="secondary" (click)="openDirectAccess()">
+        <i class="fas fa-external-link-alt"></i> Direct Access 
+      </button>
+    </div>
+  </c-modal-body>
+  <c-modal-footer>
+    <button cButton color="secondary" (click)="closeWebAccessModal()">Cancel</button>
+  </c-modal-footer>
+</c-modal>

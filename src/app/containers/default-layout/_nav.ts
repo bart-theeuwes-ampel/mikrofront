@@ -28,6 +28,12 @@ export const navItems: INavData[] = [
     // linkProps: { fragment: 'someAnchor' },
     icon: 'fa-solid fa-layer-group'
   },
+  {
+    name: 'Network Maps',
+    url: '/maps',
+    icon:'fa-solid fa-map',
+    attributes: { 'pro':true }
+  },
   // {
   //   name: 'Tools',
   //   url: '/login',
