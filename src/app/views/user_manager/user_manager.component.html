@@ -56,124 +56,200 @@
 
 <c-modal #EditTaskModal backdrop="static" size="lg" [(visible)]="EditTaskModalVisible" id="EditTaskModal">
   <c-modal-header>
-    <h5 *ngIf="SelectedUser['action']=='edit'" cModalTitle>Editing User {{SelectedUser['name']}}</h5>
-    <h5 *ngIf="SelectedUser['action']=='add'" cModalTitle>Adding new User</h5>
+    <h5 *ngIf="SelectedUser['action']=='edit'" cModalTitle><i class="fa-solid fa-user-pen me-1"></i>Edit: {{SelectedUser['username']}}</h5>
+    <h5 *ngIf="SelectedUser['action']=='add'" cModalTitle><i class="fa-solid fa-user-plus me-1"></i>Add User</h5>
     <button [cModalToggle]="EditTaskModal.id" cButtonClose></button>
   </c-modal-header>
-  <c-modal-body>
-    <div [cFormFloating]="true" class="mb-3">
-      <input cFormControl id="floatingInput" placeholder="User Name" [(ngModel)]="SelectedUser['username']" />
-      <label cLabel for="floatingInput">User Name</label>
-    </div>
-
-    <c-input-group class="mb-3">
-      <span cInputGroupText>First Name</span>
-      <input cFormControl id="floatingInput" placeholder="First Name" [(ngModel)]="SelectedUser['first_name']" />
-
-      <span cInputGroupText>Last Name</span>
-      <input cFormControl id="floatingInput" placeholder="Last Name" [(ngModel)]="SelectedUser['last_name']" />
-    </c-input-group>
-
-    <div [cFormFloating]="true" class="mb-3">
-      <input cFormControl id="floatingInput" placeholder="Email Address" [(ngModel)]="SelectedUser['email']" />
-      <label cLabel for="floatingInput">Email Address</label>
-    </div>
-
-    <div [cFormFloating]="true" class="mb-3">
-      <input type="password" cFormControl id="floatingInput" placeholder="Password" [(ngModel)]="SelectedUser['password']" />
-      <label cLabel for="floatingInput">Password</label>
-    </div>
-    <c-input-group>
-    <h5>MikroWizard permisssions :</h5>
-    <c-container>
-      <c-row>
-        <c-col *ngFor='let perm of adminperms | keyvalue' [md]="6" class="mb-1">
-          <label cFormCheckLabel style="text-transform: capitalize">{{ perm.key}} :</label>
-          <c-form-check class="md-6" [switch]="true" style="float: right;">
-            <c-button-group>
-              <c-button-group aria-label="Basic  example" role="group">
-                <button cButton color="info"  variant="outline" size="sm" [active]="adminperms[perm.key]=='read'"
-                  (click)="setRadioValue(perm.key,'read')">Read</button>
-                <button cButton color="danger"  variant="outline" size="sm" [active]="adminperms[perm.key]=='write'"
-                  (click)="setRadioValue(perm.key,'write')">Write</button>
-                  <button cButton color="success"  variant="outline" size="sm" [active]="adminperms[perm.key]=='full'"
-                    (click)="setRadioValue(perm.key,'full')">Full</button>
-                <button cButton color="dark"  variant="outline" size="sm" [active]="adminperms[perm.key]=='none'"
-                  (click)="setRadioValue(perm.key,'none')">None</button>
-              </c-button-group>
-            </c-button-group>
-          </c-form-check>
+  <c-modal-body class="p-3">
+    <!-- User Details -->
+    <div class="user-form-section mb-4">
+      <div class="section-header mb-3">
+        <h6 class="section-title mb-1"><i class="fa-solid fa-user me-2"></i>Basic Information</h6>
+        <small class="text-muted">Enter the user's personal details and login credentials</small>
+      </div>
+      <c-row class="g-3">
+        <c-col xs="12" md="6">
+          <input cFormControl placeholder="Username (required for login)" [(ngModel)]="SelectedUser['username']" 
+            class="form-input" title="Unique username for system login" />
+        </c-col>
+        <c-col xs="12" md="6">
+          <input cFormControl placeholder="Email Address (for notifications)" [(ngModel)]="SelectedUser['email']" 
+            class="form-input" type="email" title="Valid email address for system notifications" />
+        </c-col>
+        <c-col xs="12" md="4">
+          <input cFormControl placeholder="First Name (optional)" [(ngModel)]="SelectedUser['first_name']" 
+            class="form-input" title="User's first name" />
+        </c-col>
+        <c-col xs="12" md="4">
+          <input cFormControl placeholder="Last Name (optional)" [(ngModel)]="SelectedUser['last_name']" 
+            class="form-input" title="User's last name" />
+        </c-col>
+        <c-col xs="12" md="4">
+          <input type="password" cFormControl placeholder="Password (min 6 characters)" [(ngModel)]="SelectedUser['password']" 
+            class="form-input" title="Secure password for user login" />
         </c-col>
       </c-row>
-    </c-container>
-    </c-input-group>
-    <c-input-group *ngIf="userperms.length>0" class="mb-3">
-      <h5>Mikrotik permisssions :</h5>
-      <gui-grid  [autoResizeWidth]="true" [source]="userperms" [columnMenu]="columnMenu" [sorting]="sorting"
-        [autoResizeWidth]=true [paging]="paging" >
-        <gui-grid-column header="Group Name" field="group_name">
-          <ng-template let-value="item.group_name" let-item="item" let-index="index">
-            &nbsp; {{value}} </ng-template>
-        </gui-grid-column>
-        <gui-grid-column header="perm Name" field="perm_name">
-          <ng-template let-value="item.perm_name" let-item="item" let-index="index">
-            {{value}}
-          </ng-template>
-        </gui-grid-column>
-        <gui-grid-column header="Actions" width="120" field="action">
-          <ng-template let-value="item.id" let-item="item" let-index="index">
-            <button cButton color="danger" size="sm" (click)="confirm_delete_perm(item);"><i
-                class="fa-regular fa-trash-can"></i></button>
-          </ng-template>
-        </gui-grid-column>
-      </gui-grid>
-    </c-input-group>
-    <hr />
-    <table >
-      <td style="width: 30%;">
-        <span>Add new Permission</span>
-      </td>
-      <td>
-        <mat-form-field>
-          <mat-select cFormControl [(ngModel)]="devgroup"  placeholder="Device Group" #singleSelect>
-            <mat-option>
-              <ngx-mat-select-search></ngx-mat-select-search>
-            </mat-option>
-            <mat-option *ngFor="let group of allDevGroups" [value]="group">
-              {{group.name}}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-      </td>
-      <td>
-        <mat-form-field>
-          <mat-select cFormControl placeholder="Permission" [(ngModel)]="permission" #singleSelect>
-            <mat-option>
-              <ngx-mat-select-search></ngx-mat-select-search>
-            </mat-option>
-            <mat-option *ngFor="let perm of allPerms" [value]="perm">
-              {{perm.name}}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-      </td>
-      <td>
-        <button *ngIf="SelectedUser['action']=='edit'" cButton color="primary" (click)="add_user_perm()">Add+</button>
-        <button *ngIf="SelectedUser['action']=='add'" cButton color="primary" (click)="add_new_user_perm()">Add+</button>
-        <!-- <button *ngIf="SelectedUser['action']=='add'" cButton color="primary" (click)="loading=!loading">++</button> -->
-      </td>
-    </table>
-  </c-modal-body>
-  <c-modal-footer  style="justify-content: space-between;">
-    <div>
-      <button *ngIf="SelectedUser['role']!='disabled'" (click)="SelectedUser['role']='disabled'" cButton color="danger">Deactive</button>
-      <button *ngIf="SelectedUser['role']=='disabled'" (click)="SelectedUser['role']='admin'" cButton color="success">Activate</button>
     </div>
+
+    <!-- System Permissions -->
+    <div class="permissions-section mb-4">
+      <div class="section-header mb-3">
+        <h6 class="section-title mb-1"><i class="fa-solid fa-shield-halved me-2"></i>System Access Levels</h6>
+        <small class="text-muted">Control what system features this user can access and modify</small>
+      </div>
+      <div class="permission-legend mb-2">
+        <span class="legend-item"><span class="legend-color bg-info"></span>R = Read Only</span>
+        <span class="legend-item"><span class="legend-color bg-warning"></span>W = Read & Write</span>
+        <span class="legend-item"><span class="legend-color bg-success"></span>F = Full Control</span>
+        <span class="legend-item"><span class="legend-color bg-secondary"></span>× = No Access</span>
+      </div>
+      <div class="permissions-compact">
+        <div *ngFor='let perm of adminperms | keyvalue' class="perm-row">
+          <span class="perm-label">{{ perm.key.replace('_', ' ') }}</span>
+          <div class="perm-controls">
+            <button cButton size="sm" variant="outline" color="info" [active]="adminperms[perm.key]=='read'"
+              (click)="setRadioValue(perm.key,'read')" title="Read Only Access">R</button>
+            <button cButton size="sm" variant="outline" color="warning" [active]="adminperms[perm.key]=='write'"
+              (click)="setRadioValue(perm.key,'write')" title="Read & Write Access">W</button>
+            <button cButton size="sm" variant="outline" color="success" [active]="adminperms[perm.key]=='full'"
+              (click)="setRadioValue(perm.key,'full')" title="Full Control Access">F</button>
+            <button cButton size="sm" variant="outline" color="secondary" [active]="adminperms[perm.key]=='none'"
+              (click)="setRadioValue(perm.key,'none')" title="No Access">×</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Device Permissions -->
+    <div class="device-permissions-section">
+      <div class="section-header mb-3">
+        <h6 class="section-title mb-1"><i class="fa-solid fa-network-wired me-2"></i>Device Access Control</h6>
+        <small class="text-muted">Grant access to specific device groups with defined permission levels</small>
+      </div>
+      
+      <!-- Add New Permission -->
+      <div class="add-permission-card mb-3">
+        <div class="add-header">
+          <i class="fa-solid fa-plus-circle text-primary me-2"></i>
+          <span class="fw-semibold">Add Device Permission</span>
+        </div>
+        <c-row class="g-2 mt-2">
+          <c-col xs="12" md="5">
+            <div class="search-select-wrapper">
+              <label class="search-label">Device Group</label>
+              <input cFormControl 
+                [(ngModel)]="devgroupSearch" 
+                (input)="filterDevGroups($event)"
+                (focus)="showDevGroupDropdown = true"
+                (blur)="hideDevGroupDropdown()"
+                placeholder="Search and select device group..."
+                class="search-input compact-select"
+                autocomplete="off" />
+              <div *ngIf="showDevGroupDropdown && filteredDevGroups.length > 0" class="search-dropdown">
+                <div *ngFor="let group of filteredDevGroups" 
+                  class="search-option" 
+                  (mousedown)="selectDevGroup(group)">
+                  {{group.name}}
+                </div>
+              </div>
+              <div *ngIf="showDevGroupDropdown && filteredDevGroups.length === 0 && devgroupSearch" class="search-no-results">
+                No groups found
+              </div>
+            </div>
+          </c-col>
+          <c-col xs="12" md="5">
+            <div class="search-select-wrapper">
+              <label class="search-label">Permission Level</label>
+              <input cFormControl 
+                [(ngModel)]="permissionSearch" 
+                (input)="filterPermissions($event)"
+                (focus)="showPermissionDropdown = true"
+                (blur)="hidePermissionDropdown()"
+                placeholder="Search and select permission..."
+                class="search-input compact-select"
+                autocomplete="off" />
+              <div *ngIf="showPermissionDropdown && filteredPermissions.length > 0" class="search-dropdown">
+                <div *ngFor="let perm of filteredPermissions" 
+                  class="search-option" 
+                  (mousedown)="selectPermission(perm)">
+                  {{perm.name}}
+                </div>
+              </div>
+              <div *ngIf="showPermissionDropdown && filteredPermissions.length === 0 && permissionSearch" class="search-no-results">
+                No permissions found
+              </div>
+            </div>
+          </c-col>
+          <c-col xs="12" md="2" class="d-flex align-items-end">
+            <button *ngIf="SelectedUser['action']=='edit'" cButton color="success" size="sm" class="w-100 add-btn" 
+              (click)="add_user_perm()" [disabled]="!devgroup || !permission">
+              <i class="fa-solid fa-plus me-1"></i>Add Access
+            </button>
+            <button *ngIf="SelectedUser['action']=='add'" cButton color="success" size="sm" class="w-100 add-btn" 
+              (click)="add_new_user_perm()" [disabled]="!devgroup || !permission">
+              <i class="fa-solid fa-plus me-1"></i>Add Access
+            </button>
+          </c-col>
+        </c-row>
+      </div>
+
+      <!-- Current Permissions -->
+      <div class="current-permissions">
+        <div class="permissions-header">
+          <h6 class="mb-1"><i class="fa-solid fa-list-check me-2 text-success"></i>Current Device Access</h6>
+          <span class="badge bg-info">{{userperms.length}} permission(s)</span>
+        </div>
+        
+        <div *ngIf="userperms.length>0" class="permissions-list mt-2">
+          <div *ngFor="let perm of userperms; let i = index" class="permission-item">
+            <div class="perm-number">{{i + 1}}</div>
+            <div class="perm-info">
+              <div class="perm-main">
+                <i class="fa-solid fa-server me-1 text-primary"></i>
+                <span class="group-name">{{perm.group_name}}</span>
+              </div>
+              <div class="perm-detail">
+                <i class="fa-solid fa-key me-1 text-warning"></i>
+                <span class="perm-name">{{perm.perm_name}}</span>
+              </div>
+            </div>
+            <button cButton color="danger" size="sm" variant="outline" (click)="confirm_delete_perm(perm)" 
+              title="Remove this permission" class="remove-btn">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div *ngIf="userperms.length==0" class="empty-permissions">
+          <div class="empty-icon">
+            <i class="fa-solid fa-shield-xmark text-muted"></i>
+          </div>
+          <div class="empty-text">
+            <strong>No device access granted</strong>
+            <p class="mb-0 text-muted">Add permissions above to grant access to device groups</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </c-modal-body>
+  <c-modal-footer class="d-flex justify-content-between flex-wrap gap-2 p-2">
     <div>
-      <button *ngIf="SelectedUser['action']=='add'" (click)="submit('add')" cButton color="primary">Add</button>
-      <button *ngIf="SelectedUser['action']=='edit'" (click)="submit('edit')" cButton color="primary">save</button>
-      <button [cModalToggle]="EditTaskModal.id" cButton color="secondary">
-        Close
+      <button *ngIf="SelectedUser['role']!='disabled'" (click)="SelectedUser['role']='disabled'" cButton color="danger" size="sm">
+        <i class="fa-solid fa-user-slash me-1"></i><span class="d-none d-sm-inline">Deactivate</span>
+      </button>
+      <button *ngIf="SelectedUser['role']=='disabled'" (click)="SelectedUser['role']='admin'" cButton color="success" size="sm">
+        <i class="fa-solid fa-user-check me-1"></i><span class="d-none d-sm-inline">Activate</span>
+      </button>
+    </div>
+    <div class="d-flex gap-2">
+      <button *ngIf="SelectedUser['action']=='add'" (click)="submit('add')" cButton color="primary" size="sm">
+        <i class="fa-solid fa-plus me-1"></i>Add
+      </button>
+      <button *ngIf="SelectedUser['action']=='edit'" (click)="submit('edit')" cButton color="primary" size="sm">
+        <i class="fa-solid fa-save me-1"></i>Save
+      </button>
+      <button [cModalToggle]="EditTaskModal.id" cButton color="secondary" size="sm">
+        <i class="fa-solid fa-times me-1"></i>Close
       </button>
     </div>
   </c-modal-footer>

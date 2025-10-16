@@ -78,6 +78,12 @@ export class UserManagerComponent implements OnInit {
   public permission: any = {};
   public allDevGroups: any = [];
   public allPerms: any = [];
+  public devgroupSearch: string = '';
+  public permissionSearch: string = '';
+  public filteredDevGroups: any = [];
+  public filteredPermissions: any = [];
+  public showDevGroupDropdown: boolean = false;
+  public showPermissionDropdown: boolean = false;
   public DeletePermConfirmModalVisible: boolean = false;
   public userperms: any = {};
   public userresttrictions: any = false;
@@ -127,6 +133,40 @@ export class UserManagerComponent implements OnInit {
 
   setRadioValue(key: string, value: string): void {
     this.adminperms[key] = value;
+  }
+
+  filterDevGroups(event: any): void {
+    const query = event.target.value.toLowerCase();
+    this.filteredDevGroups = this.allDevGroups.filter((group: any) => 
+      group.name.toLowerCase().includes(query)
+    );
+  }
+
+  filterPermissions(event: any): void {
+    const query = event.target.value.toLowerCase();
+    this.filteredPermissions = this.allPerms.filter((perm: any) => 
+      perm.name.toLowerCase().includes(query)
+    );
+  }
+
+  selectDevGroup(group: any): void {
+    this.devgroup = group;
+    this.devgroupSearch = group.name;
+    this.showDevGroupDropdown = false;
+  }
+
+  selectPermission(perm: any): void {
+    this.permission = perm;
+    this.permissionSearch = perm.name;
+    this.showPermissionDropdown = false;
+  }
+
+  hideDevGroupDropdown(): void {
+    setTimeout(() => this.showDevGroupDropdown = false, 200);
+  }
+
+  hidePermissionDropdown(): void {
+    setTimeout(() => this.showPermissionDropdown = false, 200);
   }
 
   public rowSelection: boolean | GuiRowSelection = {
@@ -226,6 +266,7 @@ export class UserManagerComponent implements OnInit {
       _self.allPerms = res.map((x: any) => {
         return { id: x["id"], name: x.name };
       });
+      _self.filteredPermissions = [..._self.allPerms];
       _self.data_provider.get_devgroup_list().then((res) => {
         if ("error" in res && res.error.indexOf("Unauthorized")) {
           _self.show_toast(
@@ -238,6 +279,7 @@ export class UserManagerComponent implements OnInit {
         _self.allDevGroups = res.map((x: any) => {
           return { id: x["id"], name: x.name };
         });
+        _self.filteredDevGroups = [..._self.allDevGroups];
       }
       });
     }
@@ -254,6 +296,10 @@ export class UserManagerComponent implements OnInit {
         action: "add",
       };
       this.adminperms = { ...this.defadminperms };
+      this.devgroup = {};
+      this.permission = {};
+      this.devgroupSearch = '';
+      this.permissionSearch = '';
       this.EditTaskModalVisible = true;
       return;
     }
@@ -263,6 +309,10 @@ export class UserManagerComponent implements OnInit {
     } else this.adminperms = { ...this.defadminperms };
     _self.SelectedUser["action"] = "edit";
     _self.get_user_perms(_self.SelectedUser["id"]);
+    _self.devgroup = {};
+    _self.permission = {};
+    _self.devgroupSearch = '';
+    _self.permissionSearch = '';
     _self.EditTaskModalVisible = true;
   }
 
