@@ -435,6 +435,14 @@ export class VaultComponent implements OnInit {
 
 
 
+  copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      this.show_toast('Success', 'Password copied to clipboard', 'success');
+    }).catch(() => {
+      this.show_toast('Error', 'Failed to copy password', 'danger');
+    });
+  }
+
   logger(item: any) {
     console.dir(item);
   }

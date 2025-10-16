@@ -12,6 +12,7 @@ import {
   TabsModule,
   ToastModule,
   CollapseModule,
+  TooltipModule,
 } from "@coreui/angular";
 import { VaultRoutingModule } from "./vault-routing.module";
 import { VaultComponent } from "./vault.component";
@@ -36,7 +37,8 @@ import { MatFormFieldModule } from "@angular/material/form-field";
     ToastModule,
     MatInputModule,
     MatFormFieldModule,
-    CollapseModule
+    CollapseModule,
+    TooltipModule
   ],
   declarations: [VaultComponent],
 })
