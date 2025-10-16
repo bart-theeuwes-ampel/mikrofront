@@ -9,6 +9,9 @@ import {
   GridModule,
   ModalModule,
   ButtonGroupModule,
+  BadgeModule,
+  AlertModule,
+  ToastModule,
 } from "@coreui/angular";
 import { UserTasksRoutingModule } from "./user_tasks-routing.module";
 import { UserTasksComponent } from "./user_tasks.component";
@@ -25,6 +28,9 @@ import { NgxSuperSelectModule} from "ngx-super-select";
     FormModule,
     ButtonModule,
     ButtonGroupModule,
+    BadgeModule,
+    AlertModule,
+    ToastModule,
     GuiGridModule,
     ModalModule,
     ReactiveFormsModule,
