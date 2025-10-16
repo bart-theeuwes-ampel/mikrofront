@@ -25,29 +25,67 @@
               <ng-container *ngIf="item.id==1 ; then Default;else NotDefault">
               </ng-container>
               <ng-template #Default>
-                <c-badge color="info">All Devices</c-badge>
+                <c-badge color="info"><i class="fa-solid fa-network-wired me-1"></i>All Devices</c-badge>
               </ng-template>
               <ng-template #NotDefault>
-                <c-badge color="info" *ngIf="value[0]==null && item.id!=1">0 Members</c-badge>
-                <c-badge color="info" *ngIf="value[0]!=null">{{value.length}} Members</c-badge>
+                <c-badge color="info" *ngIf="value[0]==null && item.id!=1"
+                  [cTooltip]="'No devices assigned'" style="cursor: help">
+                  <i class="fa-solid fa-server me-1"></i>0
+                </c-badge>
+                <c-badge color="info" *ngIf="value[0]!=null"
+                  [cTooltip]="getDevicesTooltip(item)" 
+                  [cTooltipPlacement]="'top'" style="cursor: help">
+                  <i class="fa-solid fa-server me-1"></i>{{value.length}}
+                </c-badge>
               </ng-template>
             </ng-template>
           </gui-grid-column>
           <gui-grid-column header="Create Time" field="created">
             <ng-template let-value="item.created" let-item="item" let-index="index">
-
-              {{value}}
+              {{formatCreateTime(value)}}
             </ng-template>
           </gui-grid-column>
 
-          <gui-grid-column header="Actions" field="action">
-            <ng-template let-value="item.id" let-item="item" let-index="index">
-              <button [disabled]="value==1" cButton color="warning" size="sm" (click)="editAddGroup(item,'showedit');"
-                class="mx-1"><i class="fa-regular fa-pen-to-square"></i></button>
-              <button [disabled]="value==1" cButton color="info" size="sm" (click)="show_members(item.id);"
-                class="mx-1"><i class="fa-regular fa-eye"></i></button>
-              <button [disabled]="value==1" cButton color="danger" size="sm" (click)="show_delete_group(item);"
-                class="mx-1"><i class="fa-regular fa-trash-can"></i></button>
+          <gui-grid-column header="Users" field="assigned_users" width="80" align="CENTER">
+            <ng-template let-value="item.assigned_users" let-item="item" let-index="index">
+              <c-badge color="info" 
+                [cTooltip]="getUsersTooltip(value)" 
+                [cTooltipPlacement]="'top'"
+                style="cursor: help">
+                <i class="fa-solid fa-users me-1"></i>{{value.length}}
+              </c-badge>
+            </ng-template>
+          </gui-grid-column>
+
+          <gui-grid-column align="center" [cellEditing]="false" [sorting]="false" header="Action">
+            <ng-template let-value="value" let-item="item">
+              <button size="sm" shape="rounded-0" variant="outline" cButton color="primary" (click)="show_members(item.id)"
+                style="border: none;padding: 4px 7px;"><i class="fa-regular fa-eye"></i><small> View devices</small>
+              </button>
+              <button color="primary" shape="rounded-0" variant="ghost" style="padding: 4px 7px;"
+                [matMenuTriggerFor]="menu" cButton>
+                <i class="fa-solid fa-bars"></i>
+              </button>
+              <mat-menu #menu="matMenu">
+                <div cListGroup>
+                  <li cListGroupItem [active]="false" color="dark">Actions Menu</li>
+                  <button size="sm" (click)="editAddGroup(item,'showedit')" style="padding: 4px 7px;"
+                    [disabled]="item.id==1" cListGroupItem><i class="fa-solid fa-pencil"></i><small>
+                      Edit Group</small></button>
+                  <button size="sm" (click)="manageUsers(item)" style="padding: 4px 7px;"
+                    cListGroupItem><i class="fa-solid fa-users-gear"></i><small>
+                      Manage Users</small></button>
+                  <button size="sm" (click)="groupFirmwareAction(item, 'update')" style="padding: 4px 7px;"
+                    cListGroupItem><i class="text-success fa-solid fa-upload"></i><small>
+                      Update Firmware</small></button>
+                  <button size="sm" (click)="groupFirmwareAction(item, 'upgrade')" style="padding: 4px 7px;"
+                    cListGroupItem><i class="text-secondary fa-solid fa-microchip"></i><small>
+                      Upgrade Firmware</small></button>
+                  <button size="sm" (click)="show_delete_group(item)" style="padding: 4px 7px;"
+                    [disabled]="item.id==1" cListGroupItem><i class="text-danger fa-solid fa-trash"></i><small>
+                      Delete Group</small></button>
+                </div>
+              </mat-menu>
             </ng-template>
           </gui-grid-column>
         </gui-grid>
@@ -59,92 +97,146 @@
 
 
 
-<c-modal #EditGroupModal backdrop="static" size="lg" [(visible)]="EditGroupModalVisible" id="EditGroupModal">
-  <c-modal-header>
-    <h5 cModalTitle> Group Edit</h5>
+<c-modal #EditGroupModal backdrop="static" size="xl" [(visible)]="EditGroupModalVisible" id="EditGroupModal">
+  <c-modal-header class="bg-light">
+    <h5 cModalTitle><i class="fa-solid fa-edit me-2"></i>Edit Device Group</h5>
     <button [cModalToggle]="EditGroupModal.id" cButtonClose></button>
   </c-modal-header>
-  <c-modal-body>
-    <c-input-group class="mb-3">
-      <div [cFormFloating]="true" class="mb-3">
-        <input cFormControl id="floatingInput" placeholder="Group Name" [(ngModel)]="currentGroup['name']" />
-        <label cLabel for="floatingInput">Group Name</label>
+  <c-modal-body class="p-4">
+    <!-- Group Basic Info -->
+    <div class="bg-light p-3 rounded mb-3 d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center flex-grow-1 me-3">
+        <label class="form-label me-2 mb-0 fw-semibold">Group Name:</label>
+        <input cFormControl [(ngModel)]="currentGroup['name']" class="form-control-sm" style="max-width: 300px;" />
       </div>
-    </c-input-group>
-    <c-input-group class="mb-3">
-      <h5>Group Members :</h5>
-      <gui-grid [autoResizeWidth]="true" [searching]="searching" [source]="groupMembers" [columnMenu]="columnMenu"
-        [sorting]="sorting" [infoPanel]="infoPanel" [rowSelection]="rowSelection"
-        (selectedRows)="onSelectedRowsMembers($event)" [autoResizeWidth]=true [paging]="paging">
-        <gui-grid-column header="Member Name" field="name">
-          <ng-template let-value="item.name" let-item="item" let-index="index">
-            &nbsp; {{value}} </ng-template>
-        </gui-grid-column>
-        <gui-grid-column header="perm Name" field="ip">
-          <ng-template let-value="item.ip" let-item="item" let-index="index">
-            {{value}}
-          </ng-template>
-        </gui-grid-column>
-        <gui-grid-column header="Actions" width="120" field="action">
-          <ng-template let-value="item.id" let-item="item" let-index="index">
-            <button cButton color="danger" size="sm" (click)="remove_from_group(item.id)"><i
-                class="fa-regular fa-trash-can"></i></button>
-          </ng-template>
-        </gui-grid-column>
-      </gui-grid>
-      <br />
-      <button *ngIf="MemberRows.length!= 0" style="margin: 10px 0;" cButton color="danger" size="sm"><i
-          class="fa-regular fa-trash-can"></i>Delete {{MemberRows.length}} Selected</button>
-    </c-input-group>
-    <hr />
-    <button cButton color="primary" (click)="show_new_member_form()">+ Add new Members</button>
+      <c-badge color="info" class="fs-6 p-2">
+        <i class="fa-solid fa-server me-1"></i>{{groupMembers.length}} Devices
+      </c-badge>
+    </div>
+
+    <!-- Current Members -->
+    <c-card class="mb-3">
+      <c-card-header class="d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fa-solid fa-list me-2"></i>Current Group Members</h6>
+        <div>
+          <button *ngIf="MemberRows.length > 0" cButton color="danger" size="sm" variant="outline" class="me-2">
+            <i class="fa-solid fa-trash me-1"></i>Remove {{MemberRows.length}} Selected
+          </button>
+          <button cButton color="success" size="sm" (click)="show_new_member_form()">
+            <i class="fa-solid fa-plus me-1"></i>Add Devices
+          </button>
+        </div>
+      </c-card-header>
+      <c-card-body class="p-0">
+        <div *ngIf="groupMembers.length === 0" class="text-center p-4 text-muted">
+          <i class="fa-solid fa-server fa-3x mb-3 opacity-50"></i>
+          <h6>No devices in this group</h6>
+          <p class="mb-0">Click "Add Devices" to start adding devices to this group</p>
+        </div>
+        <div *ngIf="groupMembers.length > 0">
+          <gui-grid [autoResizeWidth]="true" [searching]="searching" [source]="groupMembers" [columnMenu]="columnMenu"
+            [sorting]="sorting" [infoPanel]="infoPanel" [rowSelection]="rowSelection"
+            (selectedRows)="onSelectedRowsMembers($event)" [paging]="paging">
+            <gui-grid-column header="Device Name" field="name">
+              <ng-template let-value="item.name" let-item="item" let-index="index">
+                <div class="d-flex align-items-center">
+                  <i class="fa-solid fa-server me-2 text-primary"></i>
+                  <strong>{{value}}</strong>
+                </div>
+              </ng-template>
+            </gui-grid-column>
+            <gui-grid-column header="IP Address" field="ip">
+              <ng-template let-value="item.ip" let-item="item" let-index="index">
+                <c-badge color="secondary">{{value}}</c-badge>
+              </ng-template>
+            </gui-grid-column>
+            <gui-grid-column header="Actions" width="100" field="action" align="CENTER">
+              <ng-template let-value="item.id" let-item="item" let-index="index">
+                <button cButton color="danger" size="sm" variant="outline" (click)="remove_from_group(item.id)" title="Remove from group">
+                  <i class="fa-solid fa-times"></i>
+                </button>
+              </ng-template>
+            </gui-grid-column>
+          </gui-grid>
+        </div>
+      </c-card-body>
+    </c-card>
   </c-modal-body>
-  <c-modal-footer>
-    <button cButton color="primary" (click)="save_group()">save</button>
+  <c-modal-footer class="bg-light">
+    <button cButton color="primary" (click)="save_group()">
+      <i class="fa-solid fa-save me-1"></i>Save Changes
+    </button>
     <button [cModalToggle]="EditGroupModal.id" cButton color="secondary">
-      Close
+      <i class="fa-solid fa-times me-1"></i>Cancel
     </button>
   </c-modal-footer>
 </c-modal>
 
-<c-modal #NewMemberModal backdrop="static" size="lg" [(visible)]="NewMemberModalVisible" id="NewMemberModal">
-  <c-modal-header>
-    <h5 cModalTitle>Members not in Group</h5>
+<c-modal #NewMemberModal [backdrop]="true" size="xl" [(visible)]="NewMemberModalVisible" id="NewMemberModal" style="z-index: 1060; backdrop-filter: blur(2px);">
+  <c-modal-header class="bg-success text-white">
+    <h5 cModalTitle><i class="fa-solid fa-plus-circle me-2"></i>Add Devices to Group</h5>
     <button (click)="NewMemberModalVisible=!NewMemberModalVisible" cButtonClose></button>
   </c-modal-header>
-  <c-modal-body>
-    <c-input-group class="mb-3">
-      <h5>Members Availble to add:</h5>
-      <gui-grid [autoResizeWidth]="true" *ngIf="NewMemberModalVisible" [searching]="searching"
-        [source]="availbleMembers" [columnMenu]="columnMenu" [sorting]="sorting" [infoPanel]="infoPanel"
-        [rowSelection]="rowSelection" (selectedRows)="onSelectedRowsNewMembers($event)" [autoResizeWidth]=true
-        [paging]="paging">
-        <gui-grid-column header="Group Name" field="name">
-          <ng-template let-value="item.name" let-item="item" let-index="index">
-            &nbsp; {{value}} </ng-template>
-        </gui-grid-column>
-        <gui-grid-column header="perm Name" field="ip">
-          <ng-template let-value="item.ip" let-item="item" let-index="index">
-            {{value}}
-          </ng-template>
-        </gui-grid-column>
-        <gui-grid-column header="perm Name" field="mac">
-          <ng-template let-value="item.mac" let-item="item" let-index="index">
-            {{value}}
-          </ng-template>
-        </gui-grid-column>
-      </gui-grid>
-      <br />
-    </c-input-group>
-    <hr />
+  <c-modal-body class="p-4">
+    <!-- Selection Summary -->
+    <div class="mb-3" style="min-height: 58px;">
+      <c-alert *ngIf="NewMemberRows.length > 0" color="info" class="d-flex align-items-center mb-0">
+        <i class="fa-solid fa-info-circle me-2"></i>
+        <span><strong>{{NewMemberRows.length}}</strong> device(s) selected for addition</span>
+      </c-alert>
+    </div>
+
+    <!-- Available Devices -->
+    <c-card>
+      <c-card-header>
+        <h6 class="mb-0"><i class="fa-solid fa-server me-2"></i>Available Devices ({{availbleMembers.length}} total)</h6>
+      </c-card-header>
+      <c-card-body class="p-0">
+        <div *ngIf="availbleMembers.length === 0" class="text-center p-4 text-muted">
+          <i class="fa-solid fa-check-circle fa-3x mb-3 text-success opacity-50"></i>
+          <h6>All devices are already in groups</h6>
+          <p class="mb-0">No available devices to add to this group</p>
+        </div>
+        <div *ngIf="availbleMembers.length > 0">
+          <gui-grid [autoResizeWidth]="true" *ngIf="NewMemberModalVisible" [searching]="searching"
+            [source]="availbleMembers" [columnMenu]="columnMenu" [sorting]="sorting" [infoPanel]="infoPanel"
+            [rowSelection]="rowSelection" (selectedRows)="onSelectedRowsNewMembers($event)" [paging]="paging">
+            <gui-grid-column header="Device Name" field="name">
+              <ng-template let-value="item.name" let-item="item" let-index="index">
+                <div class="d-flex align-items-center">
+                  <i class="fa-solid fa-server me-2 text-primary"></i>
+                  <strong>{{value}}</strong>
+                </div>
+              </ng-template>
+            </gui-grid-column>
+            <gui-grid-column header="IP Address" field="ip">
+              <ng-template let-value="item.ip" let-item="item" let-index="index">
+                <c-badge color="secondary">{{value}}</c-badge>
+              </ng-template>
+            </gui-grid-column>
+            <gui-grid-column header="MAC Address" field="mac">
+              <ng-template let-value="item.mac" let-item="item" let-index="index">
+                <small class="text-muted">{{value}}</small>
+              </ng-template>
+            </gui-grid-column>
+          </gui-grid>
+        </div>
+      </c-card-body>
+    </c-card>
   </c-modal-body>
 
-  <c-modal-footer>
-    <button *ngIf="NewMemberRows.length!= 0" (click)="add_new_members()" cButton color="primary">Add {{
-      NewMemberRows.length }}</button>
-    <button (click)="NewMemberModalVisible=!NewMemberModalVisible" cButton color="secondary">
-      Close
-    </button>
+  <c-modal-footer class="bg-light d-flex justify-content-between">
+    <div>
+      <small class="text-muted">Select devices from the list above to add them to the group</small>
+    </div>
+    <div>
+      <button *ngIf="NewMemberRows.length > 0" (click)="add_new_members()" cButton color="success">
+        <i class="fa-solid fa-plus me-1"></i>Add {{NewMemberRows.length}} Device(s)
+      </button>
+      <button (click)="NewMemberModalVisible=!NewMemberModalVisible" cButton color="secondary" class="ms-2">
+        <i class="fa-solid fa-times me-1"></i>Cancel
+      </button>
+    </div>
   </c-modal-footer>
 </c-modal>
 
@@ -173,6 +265,202 @@
     <button cButton color="danger" (click)="delete_group()">Confirm</button>
     <button [cModalToggle]="ConfirmModal.id" cButton color="secondary">
       Close
+    </button>
+  </c-modal-footer>
+</c-modal>
+<c-modal #UserManagementModal backdrop="static" size="xl" [(visible)]="UserManagementModalVisible" id="UserManagementModal">
+  <c-modal-header>
+    <h5 cModalTitle><i class="fa-solid fa-users-gear me-2"></i>User Permissions - {{selectedGroup?.name}}</h5>
+    <button [cModalToggle]="UserManagementModal.id" cButtonClose></button>
+  </c-modal-header>
+  <c-modal-body>
+    <c-card class="mb-3">
+      <c-card-header class="bg-light">
+        <h6 class="mb-0"><i class="fa-solid fa-user-plus me-2"></i>Add User Permission</h6>
+      </c-card-header>
+      <c-card-body>
+        <c-row class="g-3">
+          <c-col md="4">
+            <div class="search-select-wrapper">
+              <label class="search-label">User</label>
+              <input cFormControl 
+                [(ngModel)]="userSearch" 
+                (input)="filterUsers($event)"
+                (focus)="showUserDropdown = true"
+                (blur)="hideUserDropdown()"
+                placeholder="Search and select user..."
+                class="search-input compact-select"
+                autocomplete="off" />
+              <div *ngIf="showUserDropdown && filteredUsers.length > 0" class="search-dropdown">
+                <div *ngFor="let user of filteredUsers" 
+                  class="search-option" 
+                  (mousedown)="selectUser(user)">
+                  {{user.username}} ({{user.first_name}} {{user.last_name}})
+                </div>
+              </div>
+              <div *ngIf="showUserDropdown && filteredUsers.length === 0 && userSearch" class="search-no-results">
+                No users found
+              </div>
+            </div>
+          </c-col>
+          <c-col md="4">
+            <div class="search-select-wrapper">
+              <label class="search-label">Permission</label>
+              <input cFormControl 
+                [(ngModel)]="permissionSearch" 
+                (input)="filterPermissions($event)"
+                (focus)="showPermissionDropdown = true"
+                (blur)="hidePermissionDropdown()"
+                placeholder="Search and select permission..."
+                class="search-input compact-select"
+                autocomplete="off" />
+              <div *ngIf="showPermissionDropdown && filteredPermissions.length > 0" class="search-dropdown">
+                <div *ngFor="let perm of filteredPermissions" 
+                  class="search-option" 
+                  (mousedown)="selectPermission(perm)">
+                  {{perm.name}}
+                </div>
+              </div>
+              <div *ngIf="showPermissionDropdown && filteredPermissions.length === 0 && permissionSearch" class="search-no-results">
+                No permissions found
+              </div>
+            </div>
+          </c-col>
+          <c-col md="4" class="d-flex align-items-end">
+            <button cButton color="success" (click)="addUserPermission()" [disabled]="!selectedUser || !selectedPermission">
+              <i class="fa-solid fa-plus me-1"></i>Add Permission
+            </button>
+          </c-col>
+        </c-row>
+      </c-card-body>
+    </c-card>
+    <c-card>
+      <c-card-header class="bg-light">
+        <h6 class="mb-0"><i class="fa-solid fa-list-check me-2"></i>Current Permissions ({{selectedGroup?.assigned_users?.length || 0}} users)</h6>
+      </c-card-header>
+      <c-card-body class="p-0">
+        <div *ngIf="selectedGroup?.assigned_users?.length === 0" class="text-center p-4 text-muted">
+          <i class="fa-solid fa-users-slash fa-2x mb-2"></i>
+          <p class="mb-0">No users have permissions for this group</p>
+        </div>
+        <div *ngIf="selectedGroup?.assigned_users?.length > 0" class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th width="40">#</th>
+                <th>User</th>
+                <th>Name</th>
+                <th>Permission</th>
+                <th width="200">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of selectedGroup.assigned_users; let i = index">
+                <td class="text-muted">{{i + 1}}</td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-user me-2 text-primary"></i>
+                    <strong>{{user.username}}</strong>
+                  </div>
+                </td>
+                <td>{{user.first_name}} {{user.last_name}}</td>
+                <td>
+                  <c-badge [color]="getPermissionColor(user.perm_name)">{{user.perm_name}}</c-badge>
+                </td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <button cButton color="warning" size="sm" variant="outline" 
+                      (click)="editUserPermission(user)" title="Change Permission"
+                      [disabled]="selectedGroup.id === 1 && user.username === 'mikrowizard'">
+                      <i class="fa-solid fa-edit"></i>
+                    </button>
+                    <button cButton color="danger" size="sm" variant="outline" 
+                      (click)="removeUserPermission(user)" title="Remove Permission"
+                      [disabled]="selectedGroup.id === 1 && user.username === 'mikrowizard'">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </c-card-body>
+    </c-card>
+  </c-modal-body>
+  <c-modal-footer>
+    <button [cModalToggle]="UserManagementModal.id" cButton color="secondary">
+      <i class="fa-solid fa-times me-1"></i>Close
+    </button>
+  </c-modal-footer>
+</c-modal>
+
+<c-modal #EditPermissionModal backdrop="static" [(visible)]="EditPermissionModalVisible" id="EditPermissionModal">
+  <c-modal-header>
+    <h5 cModalTitle>Change Permission for {{editingUser?.username}}</h5>
+    <button [cModalToggle]="EditPermissionModal.id" cButtonClose></button>
+  </c-modal-header>
+  <c-modal-body>
+    <div class="mb-3">
+      <label class="form-label">Current Permission: <c-badge [color]="getPermissionColor(editingUser?.perm_name)">{{editingUser?.perm_name}}</c-badge></label>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">New Permission</label>
+      <select cSelect [(ngModel)]="newPermissionId" class="form-select">
+        <option value="">Select Permission...</option>
+        <option *ngFor="let perm of availablePermissions" [value]="perm.id">{{perm.name}}</option>
+      </select>
+    </div>
+  </c-modal-body>
+  <c-modal-footer>
+    <button cButton color="primary" (click)="updateUserPermission()" [disabled]="!newPermissionId">
+      <i class="fa-solid fa-save me-1"></i>Update
+    </button>
+    <button [cModalToggle]="EditPermissionModal.id" cButton color="secondary">
+      Cancel
+    </button>
+  </c-modal-footer>
+</c-modal>
+
+<c-modal #RemovePermissionModal backdrop="static" [(visible)]="RemovePermissionModalVisible" id="RemovePermissionModal">
+  <c-modal-header>
+    <h5 cModalTitle>Remove Permission</h5>
+    <button [cModalToggle]="RemovePermissionModal.id" cButtonClose></button>
+  </c-modal-header>
+  <c-modal-body>
+    <div class="text-center">
+      <i class="fa-solid fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+      <p>Are you sure you want to remove <strong>{{removingUser?.username}}</strong>'s permission from group <strong>{{selectedGroup?.name}}</strong>?</p>
+      <p class="text-muted small">This action cannot be undone.</p>
+    </div>
+  </c-modal-body>
+  <c-modal-footer>
+    <button cButton color="danger" (click)="confirmRemovePermission()">
+      <i class="fa-solid fa-trash me-1"></i>Remove
+    </button>
+    <button [cModalToggle]="RemovePermissionModal.id" cButton color="secondary">
+      Cancel
+    </button>
+  </c-modal-footer>
+</c-modal>
+<c-modal #FirmwareConfirmModal backdrop="static" [(visible)]="FirmwareConfirmModalVisible" id="FirmwareConfirmModal">
+  <c-modal-header>
+    <h5 cModalTitle>Confirm Firmware {{firmwareAction | titlecase}}</h5>
+    <button [cModalToggle]="FirmwareConfirmModal.id" cButtonClose></button>
+  </c-modal-header>
+  <c-modal-body>
+    <div class="text-center">
+      <i class="fa-solid fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+      <p>Are you sure you want to <strong>{{firmwareAction}}</strong> firmware for all devices in group <strong>{{selectedGroupForFirmware?.name}}</strong>?</p>
+      <p class="text-muted small">This action will affect all devices in this group and may take some time to complete.</p>
+    </div>
+  </c-modal-body>
+  <c-modal-footer>
+    <button cButton color="primary" (click)="confirmGroupFirmwareAction()">
+      <i class="fa-solid fa-{{firmwareAction === 'update' ? 'upload' : 'microchip'}} me-1"></i>{{firmwareAction | titlecase}} Firmware
+    </button>
+    <button [cModalToggle]="FirmwareConfirmModal.id" cButton color="secondary">
+      Cancel
     </button>
   </c-modal-footer>
 </c-modal>
