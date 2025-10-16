@@ -1,6 +1,6 @@
 {
   "name": "MikroWizard",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "copyright": "MikroWizard mikrowizard.com",
   "license": "AGPL",
   "author": "MikroWizard Team (https://github.com/MikroWizard)",
@@ -63,6 +63,8 @@
     "ngx-super-select": "^3.17.0",
     "rxjs": "~7.8.1",
     "tslib": "^2.3.0",
+    "vis-data": "^7.1.9",
+    "vis-network": "^9.1.9",
     "zone.js": "~0.14.4"
   },
   "devDependencies": {
