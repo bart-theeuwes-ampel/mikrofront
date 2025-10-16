@@ -39,7 +39,7 @@ export class DevicesComponent implements OnInit, OnDestroy {
   public tz: string;
   public ispro:boolean=false;
 
-  constructor(
+  constructor( 
     private data_provider: dataProvider,
     private route: ActivatedRoute,
     private router: Router,
@@ -72,6 +72,7 @@ export class DevicesComponent implements OnInit, OnDestroy {
   @ViewChild("grid", { static: true }) gridComponent: GuiGridComponent;
   @ViewChildren(ToasterComponent) viewChildren!: QueryList<ToasterComponent>;
   public source: Array<any> = [];
+  public originalSource: Array<any> = [];
   public columns: Array<GuiColumn> = [];
   public loading: boolean = true;
   public rows: any = [];
@@ -94,6 +95,28 @@ export class DevicesComponent implements OnInit, OnDestroy {
   public show_pass: boolean = false;
   public ExecutedDataModalVisible: boolean = false;
   public ExecutedData: any = [];
+  public filteredExecutedData: any = [];
+  public selectedTaskType: string = 'all';
+  public detailsModalVisible: boolean = false;
+  public selectedTaskDetails: any = null;
+  public detailsCurrentPage: number = 1;
+  public detailsPageSize: number = 10;
+  public detailsPaginatedResults: any[] = [];
+  public detailsSearchTerm: string = '';
+  public filteredDetailsResults: any[] = [];
+  public showWebAccessModal: boolean = false;
+  public currentDeviceInfo: any = null;
+  public addDeviceModalVisible: boolean = false;
+  public addDeviceStep: number = 1;
+  public csvFile: File | null = null;
+  public csvData: any[] = [];
+  public csvHeaders: string[] = [];
+  public csvPreview: any[] = [];
+  public columnMapping = { ip: '', username: '', password: '', port: '' };
+  public uploadStatus: string = 'Processing devices...';
+  public uploadResult = { success: 0, failed: 0, resultFile: null };
+  public currentTaskId: string = '';
+  public statusCheckTimer: any;
   
   toasterForm = {
     autohide: true,
@@ -165,10 +188,12 @@ export class DevicesComponent implements OnInit, OnDestroy {
         this.check_firmware();
         break;
       case "update":
-        this.update_firmware();
+        this.ConfirmAction = "update";
+        this.ConfirmModalVisible = true;
         break;
       case "upgrade":
-        this.upgrade_firmware();
+        this.ConfirmAction = "upgrade";
+        this.ConfirmModalVisible = true;
         break;
       case "logauth":
         this.router.navigate(["/authlog", { devid: dev.id }]);
@@ -183,7 +208,8 @@ export class DevicesComponent implements OnInit, OnDestroy {
         this.router.navigate(["/backups", { devid: dev.id }]);
         break;
       case "reboot":
-        this.reboot_devices();
+        this.ConfirmAction = "reboot";
+        this.ConfirmModalVisible = true;
         break;
       case "delete":
         this.ConfirmAction = "delete";
@@ -374,6 +400,7 @@ export class DevicesComponent implements OnInit, OnDestroy {
   }
   check_firmware() {
     var _self = this;
+    this.ConfirmModalVisible = false;
     this.data_provider
       .check_firmware(this.Selectedrows.toString())
       .then((res) => {
@@ -396,6 +423,7 @@ export class DevicesComponent implements OnInit, OnDestroy {
 
   update_firmware() {
     var _self = this;
+    this.ConfirmModalVisible = false;
     this.data_provider
       .update_firmware(this.Selectedrows.toString())
       .then((res) => {
@@ -417,6 +445,7 @@ export class DevicesComponent implements OnInit, OnDestroy {
 
   upgrade_firmware() {
     var _self = this;
+    this.ConfirmModalVisible = false;
     this.data_provider
       .upgrade_firmware(this.Selectedrows.toString())
       .then((res) => {
@@ -436,6 +465,7 @@ export class DevicesComponent implements OnInit, OnDestroy {
 
   reboot_devices() {
     var _self = this;
+    this.ConfirmModalVisible = false;
     this.data_provider
       .reboot_devices(this.Selectedrows.toString())
       .then((res) => {
@@ -492,11 +522,12 @@ export class DevicesComponent implements OnInit, OnDestroy {
         );
       }
       else{
-      _self.source = res.map((x: any) => {
+      _self.originalSource = res.map((x: any) => {
         if (x.upgrade_availble) _self.upgrades.push(x);
         if (x.update_availble) _self.updates.push(x);
         return x;
       });
+      _self.source = [..._self.originalSource];
       _self.device_interval();
       _self.loading = false;
     }
@@ -637,26 +668,273 @@ export class DevicesComponent implements OnInit, OnDestroy {
           _self.tz,
           "yyyy-MM-dd HH:mm:ss XXX"
         );
-        d.start_ip=d.info.start_ip;
-        d.end_ip=d.info.end_ip;
+        d.start_ip=d.info.start_ip || 'N/A';
+        d.end_ip=d.info.end_ip || 'N/A';
+        d.task_id=d.info.task_id || 'N/A';
+        d.device_count=d.info.device_count || 0;
+        d.username=d.info.username || 'N/A';
         d.result=JSON.parse(d.result);
+        d.success_count = d.result.filter((r: any) => r.added === true).length;
+        d.failed_count = d.result.filter((r: any) => r.added === false).length;
         index += 1;
         return d;
         });
+      _self.filteredExecutedData = [..._self.ExecutedData];
       }
     });
     }
 
+  filterByTaskType() {
+    if (this.selectedTaskType === 'all') {
+      this.filteredExecutedData = [...this.ExecutedData];
+    } else {
+      this.filteredExecutedData = this.ExecutedData.filter((d: any) => d.task_type === this.selectedTaskType);
+    }
+  }
 
+  showTaskDetails(task: any) {
+    this.selectedTaskDetails = task;
+    this.detailsCurrentPage = 1;
+    this.updateDetailsPagination();
+    this.detailsModalVisible = true;
+  }
 
+  updateDetailsPagination() {
+    if (!this.selectedTaskDetails?.result) return;
+    
+    // Filter results based on search term
+    this.filteredDetailsResults = this.selectedTaskDetails.result.filter((result: any) => 
+      result.ip.toLowerCase().includes(this.detailsSearchTerm.toLowerCase()) ||
+      (result.failures && result.failures.toLowerCase().includes(this.detailsSearchTerm.toLowerCase())) ||
+      (result.faileres && result.faileres.toLowerCase().includes(this.detailsSearchTerm.toLowerCase()))
+    );
+    
+    const startIndex = (this.detailsCurrentPage - 1) * this.detailsPageSize;
+    const endIndex = startIndex + this.detailsPageSize;
+    this.detailsPaginatedResults = this.filteredDetailsResults.slice(startIndex, endIndex);
+  }
 
+  onDetailsPageChange(page: number) {
+    this.detailsCurrentPage = page;
+    this.updateDetailsPagination();
+  }
 
+  getTotalDetailsPages(): number {
+    if (!this.filteredDetailsResults) return 0;
+    return Math.ceil(this.filteredDetailsResults.length / this.detailsPageSize);
+  }
 
+  onDetailsSearch() {
+    this.detailsCurrentPage = 1;
+    this.updateDetailsPagination();
+  }
 
+  closeDetailsModal() {
+    this.detailsModalVisible = false;
+    this.selectedTaskDetails = null;
+    this.detailsPaginatedResults = [];
+    this.filteredDetailsResults = [];
+    this.detailsCurrentPage = 1;
+    this.detailsSearchTerm = '';
+  }
 
+  filterUpdatable() {
+    this.source = this.originalSource.filter(device => device.update_availble);
+  }
 
+  filterUpgradable() {
+    this.source = this.originalSource.filter(device => device.upgrade_availble);
+  }
+
+  clearFilter() {
+    this.source = [...this.originalSource];
+  }
+
+  webAccess(device: any) {
+    this.currentDeviceInfo = device;
+    if (this.ispro) {
+      this.showWebAccessModal = true;
+    } else {
+      this.openDirectAccess();
+    }
+  }
+
+  openProxyAccess() {
+    if (this.currentDeviceInfo?.id) {
+      window.open(`/api/proxy/init?devid=${this.currentDeviceInfo.id}`, '_blank');
+    } else {
+      const ip = this.currentDeviceInfo?.ip;
+      if (ip) {
+        window.open(`/api/proxy/init?dev_ip=${ip}`, '_blank');
+      }
+    }
+    this.showWebAccessModal = false;
+  }
+
+  openDirectAccess() {
+    const ip = this.currentDeviceInfo?.ip;
+    if (ip) {
+      window.open(`http://${ip}`, '_blank');
+    }
+    this.showWebAccessModal = false;
+  }
+
+  closeWebAccessModal() {
+    this.showWebAccessModal = false;
+  }
+
+  openAddDeviceModal() {
+    this.addDeviceModalVisible = true;
+    this.resetAddDeviceForm();
+  }
+
+  closeAddDeviceModal() {
+    this.addDeviceModalVisible = false;
+    this.resetAddDeviceForm();
+  }
+
+  resetAddDeviceForm() {
+    this.addDeviceStep = 1;
+    this.csvFile = null;
+    this.csvData = [];
+    this.csvHeaders = [];
+    this.csvPreview = [];
+    this.columnMapping = { ip: '', username: '', password: '', port: '' };
+    this.uploadStatus = 'Processing devices...';
+    this.uploadResult = { success: 0, failed: 0, resultFile: null };
+    this.currentTaskId = '';
+    clearTimeout(this.statusCheckTimer);
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file && file.type === 'text/csv') {
+      this.csvFile = file;
+      this.parseCSV(file);
+    }
+  }
+
+  parseCSV(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      const csv = e.target.result;
+      const lines = csv.split('\n').filter((line: string) => line.trim());
+      
+      if (lines.length > 0) {
+        this.csvHeaders = lines[0].split(',').map((header: string) => header.trim());
+        this.csvData = lines.slice(1).map((line: string) => 
+          line.split(',').map((cell: string) => cell.trim())
+        );
+        this.csvPreview = this.csvData.slice(0, 3);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  isValidMapping(): boolean {
+    return this.columnMapping.ip !== '' && 
+           this.columnMapping.username !== '' && 
+           this.columnMapping.password !== '' && 
+           this.columnMapping.port !== '' &&
+           this.csvData.length > 0;
+  }
+
+  uploadDevices() {
+    if (!this.isValidMapping()) return;
+    
+    this.addDeviceStep = 2;
+    
+    const devices = this.csvData.map(row => ({
+      ip: row[parseInt(this.columnMapping.ip)],
+      username: row[parseInt(this.columnMapping.username)],
+      password: row[parseInt(this.columnMapping.password)],
+      port: row[parseInt(this.columnMapping.port)]
+    }));
+
+    this.data_provider.bulk_add_devices(devices).then((res) => {
+      if ('error' in res) {
+        this.addDeviceStep = 3;
+        this.show_toast('Error', 'Failed to start device upload', 'danger');
+        this.uploadResult = { success: 0, failed: devices.length, resultFile: null };
+      } else if ('taskId' in res) {
+        this.currentTaskId = res.taskId;
+        this.uploadStatus = 'Processing devices...';
+        this.checkUploadStatus();
+      } else {
+        this.addDeviceStep = 3;
+        this.show_toast('Error', 'Invalid response from server', 'danger');
+        this.uploadResult = { success: 0, failed: devices.length, resultFile: null };
+      }
+    }).catch(() => {
+      this.addDeviceStep = 3;
+      this.uploadResult = { success: 0, failed: devices.length, resultFile: null };
+      this.show_toast('Error', 'Failed to upload devices', 'danger');
+    });
+  }
+
+  checkUploadStatus() {
+    clearTimeout(this.statusCheckTimer);
+    
+    this.data_provider.bulk_add_status(this.currentTaskId).then((res) => {
+      if ('error' in res) {
+        this.addDeviceStep = 3;
+        this.show_toast('Error', 'Failed to check upload status', 'danger');
+        this.uploadResult = { success: 0, failed: 0, resultFile: null };
+        return;
+      }
+      
+      if (res.status === 'completed') {
+        this.addDeviceStep = 3;
+        this.uploadResult = {
+          success: res.success || 0,
+          failed: res.failed || 0,
+          resultFile: res.resultFile || null
+        };
+        this.show_toast('Success', `${res.success} devices added successfully`, 'success');
+        this.initGridTable();
+      } else if (res.status === 'failed') {
+        this.addDeviceStep = 3;
+        this.show_toast('Error', res.message || 'Upload failed', 'danger');
+        this.uploadResult = { success: 0, failed: 0, resultFile: null };
+      } else {
+        // Still processing
+        this.uploadStatus = res.message || 'Processing devices...';
+        this.statusCheckTimer = setTimeout(() => {
+          this.checkUploadStatus();
+        }, 3000);
+      }
+    }).catch(() => {
+      this.addDeviceStep = 3;
+      this.show_toast('Error', 'Failed to check upload status', 'danger');
+      this.uploadResult = { success: 0, failed: 0, resultFile: null };
+    });
+  }
+
+  downloadResults() {
+    if (this.uploadResult.resultFile) {
+      const link = document.createElement('a');
+      link.href = this.uploadResult.resultFile;
+      link.download = 'device_upload_results.csv';
+      link.click();
+    }
+  }
+
+  getTaskTypeLabel(taskType: string): string {
+    switch(taskType) {
+      case 'ip-scan': return 'IP Scan';
+      case 'bulk-add': return 'Bulk Add';
+      default: return taskType;
+    }
+  }
+
+  getStatusColor(success: number, failed: number): string {
+    if (failed === 0) return 'success';
+    if (success === 0) return 'danger';
+    return 'warning';
+  }
 
   ngOnDestroy(): void {
     clearTimeout(this.scan_timer);
+    clearTimeout(this.statusCheckTimer);
   }
 }

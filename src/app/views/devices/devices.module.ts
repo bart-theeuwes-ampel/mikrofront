@@ -17,6 +17,7 @@ import {
   ModalModule,
   ListGroupModule,
   TooltipModule,
+  TableModule,
 } from "@coreui/angular";
 import { MatMenuModule } from "@angular/material/menu";
 import { DevicesRoutingModule } from "./devices-routing.module";
@@ -44,6 +45,7 @@ import { GuiGridModule } from "@generic-ui/ngx-grid";
     ListGroupModule,
     MatMenuModule,
     TooltipModule,
+    TableModule,
   ],
   declarations: [DevicesComponent],
 })
