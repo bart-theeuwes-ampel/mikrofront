@@ -30,11 +30,13 @@ export class BackupsComponent implements OnInit {
 	public codeForHighlightAuto: string = "";
 	public ispro: boolean = false;
 	public ConfirmModalVisible: boolean = false;
+	public CriticalConfirmModalVisible: boolean = false;
 	public CompareModalVisible: boolean = false;
 	public compareitems:any=[];
 	public comparecontents:any=[];
 	public compare_type="unified";
 	public copy_msg:boolean=false;
+	public confirmationText: string = '';
 	
 	constructor(
 		private data_provider: dataProvider,
@@ -186,30 +188,54 @@ export class BackupsComponent implements OnInit {
 		this.filters_visible = !this.filters_visible;
 	}
 
-	restore_backup(apply:boolean=false){
-		var _slef=this;
-		if (!apply){
+	restore_backup(apply: boolean = false, doubleConfirmed: boolean = false, backup?: any) {
+		var _self = this;
+		
+		// Set current backup if provided
+		if (backup) {
+			this.currentBackup = backup;
+		}
+		
+		if (!apply) {
+			// Step 1: Show initial confirmation
 			this.ConfirmModalVisible = true;
 			return;
 		}
-		if (!this.currentBackup)
+		
+		if (!this.currentBackup) {
 			return;
-		if(apply){
-			_slef.ConfirmModalVisible = false;
-			_slef.BakcupModalVisible = true;
-			this.show_toast('Success', 'Backup restored successfully', 'success')
-			this.show_toast('Info', 'Wait for the router to reboot and apply config', 'info')
+		}
+		
+		if (apply && !doubleConfirmed) {
+			// Step 2: Show critical confirmation
+			this.ConfirmModalVisible = false;
+			this.CriticalConfirmModalVisible = true;
+			this.confirmationText = '';
+			return;
+		}
+		
+		if (apply && doubleConfirmed) {
+			// Step 3: Execute restore
+			_self.CriticalConfirmModalVisible = false;
+			_self.BakcupModalVisible = false;
+			
 			this.data_provider.restore_backup(this.currentBackup.id).then((res) => {
-				if ('status' in res){
-					if(res['status']=='success'){
-						this.show_toast('Success', 'Backup restored successfully', 'success')
-						this.show_toast('Info', 'Wait for the router to reboot and apply config', 'info')
+				if ('status' in res) {
+					if (res['status'] == 'success') {
+						this.show_toast('Success', 'Backup restored successfully', 'success');
+						this.show_toast('Info', 'Wait for the router to reboot and apply config', 'info');
+					} else {
+						this.show_toast('Error', 'Error restoring backup', 'danger');
 					}
-					else
-						this.show_toast('Error', 'Error restoring backup', 'danger')
 				}
 			});
 		}
+	}
+	
+	cancelCriticalRestore() {
+		this.CriticalConfirmModalVisible = false;
+		this.confirmationText = '';
+		this.currentBackup = null;
 	}
 
 	start_compare(){
@@ -243,10 +269,20 @@ export class BackupsComponent implements OnInit {
 			this.compareitems.push(item);
 		}
 	}
-	delete_compare(i:number){
-		//delete item index i from compareitems
-		this.compareitems.splice(i,1);
-
+	delete_compare(i: number) {
+		// Delete item index i from compareitems
+		this.compareitems.splice(i, 1);
+	}
+	
+	clearAllCompare() {
+		// Clear all compare items
+		this.compareitems = [];
+		this.comparecontents = [];
+	}
+	
+	isInCompareList(item: any): boolean {
+		// Check if item is already in compare list
+		return this.compareitems.some((compareItem: any) => compareItem.id === item.id);
 	}
 	reinitgrid(field: string, $event: any) {
 		if (field == "start") this.filters["start_time"] = $event.target.value;

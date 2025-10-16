@@ -12,6 +12,7 @@ import {
   ModalModule,
   FormModule,
   ToastModule,
+  AlertModule,
 } from "@coreui/angular";
 
 import { BackupsRoutingModule } from "./backups-routing.module";
@@ -34,10 +35,10 @@ import { ClipboardModule } from "@angular/cdk/clipboard";
     FormModule,
     FormsModule,
     ButtonModule,
-    ButtonModule,
     GuiGridModule,
     CollapseModule,
     BadgeModule,
+    AlertModule,
     Highlight,
     HighlightAuto,
     HighlightLineNumbers,
