@@ -15,17 +15,27 @@
       <c-card-body>
         <gui-grid [autoResizeWidth]="true" [source]="source" [columnMenu]="columnMenu" [sorting]="sorting"
           [infoPanel]="infoPanel" [autoResizeWidth]=true>
+          <gui-grid-column header="Name" field="name">
+            <ng-template let-value="item.name" let-item="item" let-index="index">
+              <strong>{{value}}</strong>
+            </ng-template>
+          </gui-grid-column>
           <gui-grid-column header="Description" field="description">
             <ng-template let-value="item.description" let-item="item" let-index="index">
               {{value}}
             </ng-template>
           </gui-grid-column>
-          <gui-grid-column header="Members type" field="pair_type">
-            <ng-template let-value="item.pair_type" let-item="item" let-index="index">
-              {{value}}
+          <gui-grid-column header="Direction" field="direction">
+            <ng-template let-value="item.direction" let-item="item" let-index="index">
+              <c-badge [color]="value == 'twoway' ? 'success' : 'warning'">{{value == 'twoway' ? 'Two Way' : 'Master Mode'}}</c-badge>
             </ng-template>
           </gui-grid-column>
-          <gui-grid-column header="Runtime" field="desc_cron">
+          <gui-grid-column header="Live Mode" field="live_mode">
+            <ng-template let-value="item.live_mode" let-item="item" let-index="index">
+              <c-badge [color]="value ? 'success' : 'secondary'">{{value ? 'Active' : 'Inactive'}}</c-badge>
+            </ng-template>
+          </gui-grid-column>
+          <gui-grid-column header="Schedule" field="desc_cron">
             <ng-template let-value="item.desc_cron" let-item="item" let-index="index">
               {{value}}
             </ng-template>
@@ -46,109 +56,190 @@
   </c-col>
 </c-row>
 
-  <c-modal #EditClonerModal backdrop="static" size="xl" [(visible)]="EditClonerModalVisible" id="EditClonerModal">
-    <c-modal-header>
-      <h5 *ngIf="SelectedCloner['action']=='edit'" cModalTitle>Editing Cloner {{SelectedCloner['name']}}</h5>
-      <h5 *ngIf="SelectedCloner['action']=='add'" cModalTitle>Adding new task</h5>
+  <c-modal #EditClonerModal backdrop="static" size="lg" [(visible)]="EditClonerModalVisible" id="EditClonerModal">
+    <c-modal-header class="bg-light">
+      <h5 *ngIf="SelectedCloner['action']=='edit'" cModalTitle><i class="fa-solid fa-edit me-2"></i>Edit Cloner: {{SelectedCloner['name']}}</h5>
+      <h5 *ngIf="SelectedCloner['action']=='add'" cModalTitle><i class="fa-solid fa-plus me-2"></i>Add New Cloner</h5>
       <button [cModalToggle]="EditClonerModal.id" cButtonClose></button>
     </c-modal-header>
-    <c-modal-body>
-      <label cLabel >General data:</label>
-      <c-input-group class="mb-3">
-        <label cInputGroupText for="floatingInput">Name</label>
-        <input cFormControl id="floatingInput" placeholder="SelectedCloner['name']" [(ngModel)]="SelectedCloner['name']" />
-        <label cInputGroupText for="floatingInput">Description</label>
-        <input cFormControl id="floatingInput" placeholder="SelectedCloner['description']"
-          [(ngModel)]="SelectedCloner['description']" />
-      </c-input-group>
-      <label cLabel >Sync config and Oprating Modes:</label>
-      <c-input-group class="mb-3">
-        <label cInputGroupText for="Direction">
-          Direction
-        </label>
-        <select cSelect id="Direction" [(ngModel)]="SelectedCloner['direction']">
-          <option value="twoway">Two way</option>
-          <option value="oneway">Master mode</option>
-        </select>
-        <label cInputGroupText for="inputGroupSelect01">
-          Live Mode
-        </label>
-        <select cSelect id="inputGroupSelect01" [(ngModel)]="SelectedCloner['live_mode']">
-          <option [ngValue]="false">Deactive</option>
-          <option [ngValue]="true">Active</option>
-        </select>
-        <label *ngIf="SelectedCloner['direction']=='oneway'" cInputGroupText for="inputGroupSelect02">
-          Schedule
-        </label>
-        <select *ngIf="SelectedCloner['direction']=='oneway'" cSelect id="inputGroupSelect02"  [(ngModel)]="SelectedCloner['schedule']">
-          <option [ngValue]="false">Deactive</option>
-          <option [ngValue]="true">Active</option>
-        </select>
-        <label cInputGroupText  *ngIf="SelectedCloner['schedule'] && SelectedCloner['direction']=='oneway'"  for="cron">cron</label>
-          <input cFormControl  *ngIf="SelectedCloner['schedule'] && SelectedCloner['direction']=='oneway'"  id="cron" placeholder="Cron" [(ngModel)]="SelectedCloner['cron']" />
-      </c-input-group>
-      <label cLabel >Peers Setting:</label>
-      <c-input-group class="mb-3">
-        <label cInputGroupText for="inputGroupSelect03">
-          Peers type
-        </label>
-        <select cSelect id="inputGroupSelect03"  (change)="form_changed()" [(ngModel)]="SelectedCloner['pair_type']">
-          <option value="devices">Devices</option>
-          <option value="groups" *ngIf="SelectedCloner['direction']=='oneway'">Groups</option>
-        </select>
-      </c-input-group>
-
-      <c-col xs style="border: 1px solid #ddd; border-radius: 4px; padding: 0;">
-        <div class="nav nav-underline" style="background: #fff; border-bottom: 2px solid #2c3e50;">
-          <div class="nav-item" *ngFor="let tab of tabs; let i = index">
-            <a class="nav-link" [active]="i==0" [cTabContent]="tabContent" [tabPaneIdx]="i">{{ tab.name }}</a>
-          </div>
+    <c-modal-body class="p-3">
+      <!-- Basic Information -->
+      <div class="cloner-form-section mb-3">
+        <div class="section-header mb-2">
+          <h6 class="section-title mb-0"><i class="fa-solid fa-info-circle me-2"></i>Basic Information</h6>
         </div>
-        <c-tab-content class="command-sections"  style="padding: 10px!important;min-height: 150px;"  #tabContent="cTabContent">
-          <c-tab-pane *ngFor="let tab of tabs; let i = index">
-            <div class="section" *ngFor="let section of tab.sections">
-              <h5 class="cloner-sections">{{ section.title }}</h5>
-              <div class="row">
-                <div class="col-4" *ngFor="let command of section.commands">
-                  <c-card style="margin-bottom: 5px;">
-                    <c-card-body class="p-2">
-                      <h6 class="card-title mb-1">{{ command }}</h6>
-                      <div class="custom-switch">
+        <c-row class="g-2">
+          <c-col xs="12" md="6">
+            <input cFormControl placeholder="Cloner Name" [(ngModel)]="SelectedCloner['name']" class="form-input-sm" />
+          </c-col>
+          <c-col xs="12" md="6">
+            <input cFormControl placeholder="Description" [(ngModel)]="SelectedCloner['description']" class="form-input-sm" />
+          </c-col>
+        </c-row>
+      </div>
+
+      <!-- Sync Configuration -->
+      <div class="cloner-form-section mb-3">
+        <div class="section-header mb-2">
+          <h6 class="section-title mb-0"><i class="fa-solid fa-sync me-2"></i>Synchronization Settings</h6>
+        </div>
+        <c-row class="g-2">
+          <c-col xs="12" md="4">
+            <label class="form-label-xs">Direction</label>
+            <select cSelect [(ngModel)]="SelectedCloner['direction']" (change)="onDirectionChange()" class="form-select-xs">
+              <option value="twoway">Two Way Sync</option>
+              <option value="oneway">Master Mode</option>
+            </select>
+          </c-col>
+          <c-col xs="12" md="4" *ngIf="SelectedCloner['direction']=='oneway'">
+            <label class="form-label-xs">Live Mode</label>
+            <select cSelect [(ngModel)]="SelectedCloner['live_mode']" class="form-select-xs">
+              <option [ngValue]="false">Inactive</option>
+              <option [ngValue]="true">Active</option>
+            </select>
+          </c-col>
+          <c-col xs="12" md="4" *ngIf="SelectedCloner['direction']=='oneway'">
+            <label class="form-label-xs">Schedule</label>
+            <select cSelect [(ngModel)]="SelectedCloner['schedule']" class="form-select-xs">
+              <option [ngValue]="false">Inactive</option>
+              <option [ngValue]="true">Active</option>
+            </select>
+          </c-col>
+          <c-col xs="12" *ngIf="SelectedCloner['schedule'] && SelectedCloner['direction']=='oneway'">
+            <label class="form-label-xs">Cron Expression</label>
+            <input cFormControl placeholder="0 0 * * *" [(ngModel)]="SelectedCloner['cron']" class="form-input-sm" />
+          </c-col>
+        </c-row>
+      </div>
+
+      <!-- Peers Configuration (Currently disabled - only devices supported) -->
+      <!-- <div class="cloner-form-section mb-3">
+        <div class="section-header mb-2">
+          <h6 class="section-title mb-0"><i class="fa-solid fa-network-wired me-2"></i>Peers Configuration</h6>
+          <small class="text-muted">Select the type of peers to synchronize</small>
+        </div>
+        <c-row class="g-2">
+          <c-col xs="12" md="6">
+            <label class="form-label-xs">Peers Type</label>
+            <select cSelect (change)="form_changed()" [(ngModel)]="SelectedCloner['pair_type']" class="form-select-xs">
+              <option value="devices">Devices</option>
+              <option value="groups" *ngIf="SelectedCloner['direction']=='oneway'">Groups</option>
+            </select>
+          </c-col>
+        </c-row>
+      </div> -->
+
+      <!-- Commands Configuration -->
+      <div class="cloner-form-section mb-3">
+        <div class="section-header mb-2">
+          <h6 class="section-title mb-0"><i class="fa-solid fa-terminal me-2"></i>Commands Configuration</h6>
+        </div>
+        <div class="commands-container-compact">
+          <div class="nav nav-underline commands-nav-compact">
+            <div class="nav-item" *ngFor="let tab of tabs; let i = index">
+              <a class="nav-link" [active]="i==0" [cTabContent]="tabContent" [tabPaneIdx]="i">{{ tab.name }}</a>
+            </div>
+          </div>
+          <c-tab-content class="command-sections-compact" #tabContent="cTabContent">
+            <c-tab-pane *ngFor="let tab of tabs; let i = index">
+              <div class="command-category-compact" *ngFor="let section of tab.sections">
+                <h6 class="category-title-compact">{{ section.title }}</h6>
+                <div class="commands-grid-compact">
+                  <div class="command-item-compact" *ngFor="let command of section.commands">
+                    <div class="command-content-compact">
+                      <span class="command-name-compact">{{ command }}</span>
+                      <div class="custom-switch-compact">
                         <input type="checkbox" class="custom-control-input" [checked]="in_active_commands(command)" (click)="activate_command(command)" [id]="command.replace('/', '')">
                         <label class="custom-control-label" [for]="command.replace('/', '')"></label>
                       </div>
-                    </c-card-body>
-                  </c-card>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </c-tab-pane>
-        </c-tab-content>
-      </c-col>
+            </c-tab-pane>
+          </c-tab-content>
+        </div>
+      </div>
 
-      <h5>Peers :</h5>
-      <gui-grid [autoResizeWidth]="true" [source]="SelectedMembers" [columnMenu]="columnMenu" [sorting]="sorting"
-         [rowSelection]="rowSelection" [autoResizeWidth]=true [paging]="paging">
-        <gui-grid-column header="Name" field="name">
-          <ng-template let-value="item.name" let-item="item" let-index="index">
-            <i class="fa-solid fa-m" style="color: #ff3300;" *ngIf="SelectedCloner['direction']=='oneway' && item.id==master"></i>
-            &nbsp; {{value}} </ng-template>
-        </gui-grid-column>
-        <gui-grid-column *ngIf="SelectedCloner['pair_type']=='devices'" header="MAC" field="mac">
-          <ng-template let-value="item.mac" let-item="item" let-index="index">
-            {{value}}
-          </ng-template>
-        </gui-grid-column>
-        <gui-grid-column header="Actions" width="120" field="action">
-          <ng-template let-value="item.id" let-item="item" let-index="index">
-            <button cButton color="danger" size="sm" [cTooltip]="'Delete Member'" (click)="remove_member(item)"><i
-                class="fa-regular fa-trash-can"></i></button>
-            <button  *ngIf="SelectedCloner['direction']=='oneway'" cButton color="success" size="sm" style="margin-left: 5px;" [cTooltip]="'Set as Master'" (click)="set_master(item.id)"><i class="fa-regular fa-star"></i></button>
-          </ng-template>
-        </gui-grid-column>
-      </gui-grid>
-      <hr />
-      <button cButton color="primary" (click)="show_new_member_form()">+ Add new Members</button>
+      <!-- Master Device Selection (for Master Mode) -->
+      <div class="cloner-form-section mb-2" *ngIf="SelectedCloner['direction']=='oneway' && SelectedMembers.length > 0">
+        <div class="section-header mb-2">
+          <h6 class="section-title mb-0"><i class="fa-solid fa-crown me-2 text-warning"></i>Master Device</h6>
+        </div>
+        <div class="master-selection-compact">
+          <div class="master-device-compact" *ngIf="master > 0">
+            <i class="fa-solid fa-server me-2 text-primary"></i>
+            <strong>{{getMasterDeviceName()}}</strong>
+            <c-badge color="warning" class="ms-2">Master</c-badge>
+          </div>
+          <div class="no-master-compact" *ngIf="master == 0">
+            <i class="fa-solid fa-exclamation-triangle me-2 text-warning"></i>
+            <span class="text-muted">No master device selected</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device Management -->
+      <div class="cloner-form-section">
+        <div class="section-header mb-2">
+          <h6 class="section-title mb-0"><i class="fa-solid fa-server me-2"></i>Device Management</h6>
+          <div class="d-flex justify-content-between align-items-center">
+            <c-badge color="info">{{SelectedMembers.length}} device(s)</c-badge>
+          </div>
+        </div>
+        
+        <div class="peers-container">
+          <div *ngIf="SelectedMembers.length == 0" class="empty-peers">
+            <div class="empty-icon">
+              <i class="fa-solid fa-users-slash fa-2x text-muted opacity-50"></i>
+            </div>
+            <div class="empty-text">
+              <strong>No peers added</strong>
+              <p class="mb-0 text-muted">Click "Add Members" to start adding peers</p>
+            </div>
+          </div>
+          
+          <div *ngIf="SelectedMembers.length > 0">
+            <gui-grid [autoResizeWidth]="true" [source]="SelectedMembers" [columnMenu]="columnMenu" [sorting]="sorting"
+               [rowSelection]="rowSelection" [autoResizeWidth]=true [paging]="paging">
+              <gui-grid-column header="Name" field="name">
+                <ng-template let-value="item.name" let-item="item" let-index="index">
+                  <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-crown me-2 text-warning" *ngIf="SelectedCloner['direction']=='oneway' && item.id==master" title="Master Device"></i>
+                    <i class="fa-solid fa-server me-2 text-primary" *ngIf="!(SelectedCloner['direction']=='oneway' && item.id==master)"></i>
+                    <strong>{{value}}</strong>
+                  </div>
+                </ng-template>
+              </gui-grid-column>
+              <gui-grid-column *ngIf="SelectedCloner['pair_type']=='devices'" header="MAC" field="mac">
+                <ng-template let-value="item.mac" let-item="item" let-index="index">
+                  <c-badge color="secondary">{{value}}</c-badge>
+                </ng-template>
+              </gui-grid-column>
+              <gui-grid-column header="Actions" width="120" field="action" align="center">
+                <ng-template let-value="item.id" let-item="item" let-index="index">
+                  <div class="btn-group" role="group">
+                    <button *ngIf="SelectedCloner['direction']=='oneway'" cButton color="warning" size="sm" variant="outline" 
+                      [cTooltip]="'Set as Master'" (click)="set_master(item.id)" [disabled]="item.id==master">
+                      <i class="fa-solid fa-crown"></i>
+                    </button>
+                    <button cButton color="danger" size="sm" variant="outline" 
+                      [cTooltip]="'Remove Member'" (click)="remove_member(item)">
+                      <i class="fa-solid fa-times"></i>
+                    </button>
+                  </div>
+                </ng-template>
+              </gui-grid-column>
+            </gui-grid>
+          </div>
+          
+          <div class="add-members-section mt-3">
+            <button cButton color="success" (click)="show_new_member_form()">
+              <i class="fa-solid fa-plus me-1"></i>Add Members
+            </button>
+          </div>
+        </div>
+      </div>
     </c-modal-body>
     <c-modal-footer>
       <button *ngIf="SelectedCloner['action']=='add'" (click)="submit('add')" cButton color="primary">Add</button>
@@ -160,44 +251,75 @@
   </c-modal>
 
 
-  <c-modal #NewMemberModal backdrop="static" size="lg" [(visible)]="NewMemberModalVisible" id="NewMemberModal">
-    <c-modal-header>
-      <h5 cModalTitle>Editing Group </h5>
+  <c-modal #NewMemberModal backdrop="static" size="xl" [(visible)]="NewMemberModalVisible" id="NewMemberModal">
+    <c-modal-header class="bg-success text-white">
+      <h5 cModalTitle><i class="fa-solid fa-user-plus me-2"></i>Add Members to Cloner</h5>
       <button (click)="NewMemberModalVisible=!NewMemberModalVisible" cButtonClose></button>
     </c-modal-header>
-    <c-modal-body>
-      <c-input-group class="mb-3">
-        <h5>Group Members :</h5>
-        <gui-grid [autoResizeWidth]="true" *ngIf="NewMemberModalVisible" [searching]="searching"
-          [source]="availbleMembers" [columnMenu]="columnMenu" [sorting]="sorting" [infoPanel]="infoPanel"
-          [rowSelection]="rowSelection" (selectedRows)="onSelectedRowsNewMembers($event)" [autoResizeWidth]=true
-          [paging]="paging">
-          <gui-grid-column header="Member Name" field="name">
-            <ng-template let-value="item.name" let-item="item" let-index="index">
-              &nbsp; {{value}} </ng-template>
-          </gui-grid-column>
-          <gui-grid-column *ngIf="SelectedCloner['pair_type']=='devices'" header="IP Address" field="ip">
-            <ng-template let-value="item.ip" let-item="item" let-index="index">
-              {{value}}
-            </ng-template>
-          </gui-grid-column>
-          <gui-grid-column *ngIf="SelectedCloner['pair_type']=='devices'" header="MAC Address" field="mac">
-            <ng-template let-value="item.mac" let-item="item" let-index="index">
-              {{value}}
-            </ng-template>
-          </gui-grid-column>
-        </gui-grid>
-        <br />
-      </c-input-group>
-      <hr />
+    <c-modal-body class="p-4">
+      <!-- Selection Summary -->
+      <div class="mb-3" style="min-height: 58px;">
+        <c-alert *ngIf="NewMemberRows.length > 0" color="info" class="d-flex align-items-center mb-0">
+          <i class="fa-solid fa-info-circle me-2"></i>
+          <span><strong>{{NewMemberRows.length}}</strong> {{SelectedCloner['pair_type']}} selected for addition</span>
+        </c-alert>
+      </div>
+
+      <!-- Available Members -->
+      <c-card>
+        <c-card-header class="bg-light">
+          <h6 class="mb-0">
+            <i class="fa-solid me-2" [class.fa-server]="SelectedCloner['pair_type'] == 'devices'" [class.fa-layer-group]="SelectedCloner['pair_type'] != 'devices'"></i>
+            Available {{SelectedCloner['pair_type'] | titlecase}} ({{availbleMembers.length}} total)
+          </h6>
+        </c-card-header>
+        <c-card-body class="p-0">
+          <div *ngIf="availbleMembers.length == 0" class="text-center p-4 text-muted">
+            <i class="fa-solid fa-check-circle fa-3x mb-3 text-success opacity-50"></i>
+            <h6>All {{SelectedCloner['pair_type']}} are already added</h6>
+            <p class="mb-0">No available {{SelectedCloner['pair_type']}} to add to this cloner</p>
+          </div>
+          <div *ngIf="availbleMembers.length > 0">
+            <gui-grid [autoResizeWidth]="true" *ngIf="NewMemberModalVisible" [searching]="searching"
+              [source]="availbleMembers" [columnMenu]="columnMenu" [sorting]="sorting" [infoPanel]="infoPanel"
+              [rowSelection]="rowSelection" (selectedRows)="onSelectedRowsNewMembers($event)" [autoResizeWidth]=true
+              [paging]="paging">
+              <gui-grid-column header="Name" field="name">
+                <ng-template let-value="item.name" let-item="item" let-index="index">
+                  <div class="d-flex align-items-center">
+                    <i class="fa-solid me-2 text-primary" [class.fa-server]="SelectedCloner['pair_type'] == 'devices'" [class.fa-layer-group]="SelectedCloner['pair_type'] != 'devices'"></i>
+                    <strong>{{value}}</strong>
+                  </div>
+                </ng-template>
+              </gui-grid-column>
+              <gui-grid-column *ngIf="SelectedCloner['pair_type']=='devices'" header="IP Address" field="ip">
+                <ng-template let-value="item.ip" let-item="item" let-index="index">
+                  <c-badge color="secondary">{{value}}</c-badge>
+                </ng-template>
+              </gui-grid-column>
+              <gui-grid-column *ngIf="SelectedCloner['pair_type']=='devices'" header="MAC Address" field="mac">
+                <ng-template let-value="item.mac" let-item="item" let-index="index">
+                  <small class="text-muted">{{value}}</small>
+                </ng-template>
+              </gui-grid-column>
+            </gui-grid>
+          </div>
+        </c-card-body>
+      </c-card>
     </c-modal-body>
 
-    <c-modal-footer>
-      <button *ngIf="NewMemberRows.length!= 0" (click)="add_new_members()" cButton color="primary">Add {{
-        NewMemberRows.length }}</button>
-      <button (click)="NewMemberModalVisible=!NewMemberModalVisible" cButton color="secondary">
-        Close
-      </button>
+    <c-modal-footer class="bg-light d-flex justify-content-between">
+      <div>
+        <small class="text-muted">Select {{SelectedCloner['pair_type']}} from the list above to add them to the cloner</small>
+      </div>
+      <div>
+        <button *ngIf="NewMemberRows.length > 0" (click)="add_new_members()" cButton color="success">
+          <i class="fa-solid fa-plus me-1"></i>Add {{NewMemberRows.length}} {{SelectedCloner['pair_type'] | titlecase}}
+        </button>
+        <button (click)="NewMemberModalVisible=!NewMemberModalVisible" cButton color="secondary" class="ms-2">
+          <i class="fa-solid fa-times me-1"></i>Cancel
+        </button>
+      </div>
     </c-modal-footer>
   </c-modal>
 

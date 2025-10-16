@@ -317,16 +317,27 @@ export class ClonerComponent implements OnInit {
       this.data_provider
         .Add_cloner(_self.SelectedCloner, _self.SelectedClonerItems)
         .then((res) => {
-          _self.initGridTable();
+          if (res.status === 'failed') {
+            _self.show_toast("Error", res.err, "danger");
+          } else {
+            _self.show_toast("Success", "Cloner added successfully", "success");
+            _self.initGridTable();
+            _self.EditClonerModalVisible = false;
+          }
         });
     } else {
       this.data_provider
         .Edit_cloner(_self.SelectedCloner, _self.SelectedClonerItems)
         .then((res) => {
-          _self.initGridTable();
+          if (res.status === 'failed') {
+            _self.show_toast("Error", res.err, "danger");
+          } else {
+            _self.show_toast("Success", "Cloner updated successfully", "success");
+            _self.initGridTable();
+            _self.EditClonerModalVisible = false;
+          }
         });
     }
-    this.EditClonerModalVisible = false;
   }
 
   onSelectedRowsNewMembers(rows: Array<GuiSelectedRow>): void {
@@ -380,6 +391,7 @@ export class ClonerComponent implements OnInit {
         members: "",
         action: "add",
       };
+      this.master=0;
       this.SelectedMembers = [];
       this.SelectedClonerItems = [];
       this.EditClonerModalVisible = true;
@@ -410,6 +422,19 @@ export class ClonerComponent implements OnInit {
 
   in_active_commands(command:string){
     return this.active_commands.includes(command);
+  }
+  
+  getMasterDeviceName(): string {
+    const masterDevice = this.SelectedMembers.find((m: any) => m.id == this.master);
+    return masterDevice ? masterDevice.name : '';
+  }
+
+  onDirectionChange() {
+    if (this.SelectedCloner['direction'] == 'twoway') {
+      this.SelectedCloner['live_mode'] = true;
+      this.SelectedCloner['schedule'] = false;
+    }
+    this.form_changed();
   }
   remove_member(item: any) {
     var _self = this;

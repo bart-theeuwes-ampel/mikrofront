@@ -1,5 +1,5 @@
 import { NgModule } from "@angular/core";
-import { CommonModule } from "@angular/common";
+import { CommonModule, TitleCasePipe } from "@angular/common";
 import { FormsModule,ReactiveFormsModule } from "@angular/forms";
 
 import {
@@ -13,6 +13,8 @@ import {
   TooltipModule,
   NavModule, 
   TabsModule,
+  BadgeModule,
+  AlertModule,
 } from "@coreui/angular";
 import { ClonerRoutingModule } from "./cloner-routing.module";
 import { ClonerComponent } from "./cloner.component";
@@ -38,7 +40,10 @@ import { NgxSuperSelectModule} from "ngx-super-select";
     TooltipModule,
     NavModule, 
     TabsModule,
+    BadgeModule,
+    AlertModule,
   ],
   declarations: [ClonerComponent],
+  providers: [TitleCasePipe],
 })
 export class ClonerModule {}
