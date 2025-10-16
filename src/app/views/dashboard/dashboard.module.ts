@@ -32,7 +32,6 @@ import { ClipboardModule } from "@angular/cdk/clipboard";
     ReactiveFormsModule,
     ButtonModule,
     TemplateIdDirective,
-    ButtonModule,
     ButtonGroupModule,
     ChartjsModule,
     CarouselModule,

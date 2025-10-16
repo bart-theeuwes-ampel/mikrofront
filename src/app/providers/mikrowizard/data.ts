@@ -278,13 +278,14 @@ export class dataProvider {
         return this.MikroWizardRPC.sendJsonRequest("/api/devgroup/update_save_group", data);
     }
 
-    get_snippets(name:string,desc:string,content:string,page:number=0,size:number=1000){
+    get_snippets(name:string,desc:string,content:string,page:number=0,size:number=1000,limit:any=false){
         var data={
             'name':name,
             'description':desc,
             'content':content, 
             'page':page,
-            'size':size
+            'size':size,
+            'limit':limit
         }
         return this.MikroWizardRPC.sendJsonRequest("/api/snippet/list", data);
     }
@@ -601,6 +602,34 @@ export class dataProvider {
         }
         return this.MikroWizardRPC.sendJsonRequest("/api/dhcp-history/get", data);
     }
+
+    getNetworkMap(){
+        return this.MikroWizardRPC.sendJsonRequest("/api/networkmap/get", {});
+    }
+
+    bulk_add_devices(devices: any[]){
+        var data = {
+            'devices': devices
+        }
+        return this.MikroWizardRPC.sendJsonRequest("/api/dev/bulk_add", data);
+    }
+
+    bulk_add_status(taskId: string){
+        var data = {
+            'taskId': taskId
+        }
+        return this.MikroWizardRPC.sendJsonRequest("/api/dev/bulk_add_status", data);
+    }
+
+    group_firmware_action(groupId: number, action: string){
+        var data = {
+            'groupId': groupId,
+            'action': action
+        }
+        return this.MikroWizardRPC.sendJsonRequest("/api/devgroup/firmware_action", data);
+    }
+
+
     ////
     //// End api funcs
     ////

@@ -1,11 +1,23 @@
-<c-row *ngIf="stats">
+<c-row>
   <c-col xs>
-    <c-card *ngIf="stats" class="mb-1">
+    <c-card class="mb-1">
       <c-card-header>Past 24 Hour Statics</c-card-header>
       <c-card-body>
         <c-row>
           <c-col md="12" xl="12" xs="12">
-            <c-row>
+            <c-row *ngIf="!stats">
+              <c-col class="mb-sm-1 mb-0" *ngFor="let item of [1,2,3,4,5]">
+                <c-card class="mb-1">
+                  <c-card-body>
+                    <div class="placeholder-glow">
+                      <div class="placeholder col-3 mb-2" style="height: 40px;"></div>
+                      <div class="placeholder col-6"></div>
+                    </div>
+                  </c-card-body>
+                </c-card>
+              </c-col>
+            </c-row>
+            <c-row *ngIf="stats">
               <c-col class="mb-sm-1 mb-0">
                 <c-widget-stat-f [title]="'Failed Logins'" class="mb-1" color="danger" padding
                   value="{{stats['FailedLogins']}}">
@@ -53,7 +65,17 @@
         <c-col xs>
           <c-row>
             <c-col md="12" xl="12" xs="12">
-              <c-row>
+              <c-row *ngIf="!stats">
+                <c-col class="mb-0 pb-0" *ngFor="let item of [1,2,3,4,5]">
+                  <div class="border-start border-start-4 border-start-info pt-1 px-3 mb-1">
+                    <div class="placeholder-glow">
+                      <div class="placeholder col-8"></div>
+                      <div class="placeholder col-6"></div>
+                    </div>
+                  </div>
+                </c-col>
+              </c-row>
+              <c-row *ngIf="stats">
                 <c-col class="mb-0 pb-0">
                   <div class="border-start border-start-4 border-start-info pt-1 px-3 mb-1">
                     <div class="text-medium-emphasis small">Total users</div>
@@ -120,16 +142,28 @@
         </form>
       </c-col>
     </c-row>
-    <c-chart [data]="chart_data" [options]="options" [height]="250" type="line">
+    <div *ngIf="!chart_data.datasets" style="height: 250px;">
+      <div class="placeholder-glow" style="height: 100%;">
+        <div class="placeholder col-12" style="height: 250px;"></div>
+      </div>
+    </div>
+    <c-chart *ngIf="chart_data.datasets" [data]="chart_data" [options]="options" [height]="250" type="line">
     </c-chart>
   </c-card-body>
 </c-card>
 <c-row>
-  <c-col xl="6" *ngIf="stats" lg="12" class="h-100" style="min-height: 160px!important;display: grid">
+  <c-col xl="6" lg="12" class="h-100" style="min-height: 160px!important;display: grid">
     <c-card class="mb-1 p-1 h-100" style="padding-left: 5px!important;">
       <div class="my-1">
         <h4 style="display: inline-block;">Version and Serial information</h4>
-
+      </div>
+      <div *ngIf="!stats">
+        <div class="placeholder-glow">
+          <div class="placeholder col-8"></div>
+          <div class="placeholder col-6"></div>
+          <div class="placeholder col-10"></div>
+          <div class="placeholder col-7"></div>
+        </div>
       </div>
       <div *ngIf="!stats['license']" class="my-1">
         <div style="display: inline-block;margin-right: 5px;">
@@ -199,8 +233,18 @@
     </c-card>
   </c-col>
   <c-col xl="6" lg="12" class="h-100" style="min-height: 160px!important;display: grid;">
-    <c-card class="h-100" *ngIf="stats" style="padding: 0!important;margin: 0!important;">
-      <c-carousel [dark]="true" [animate]="false" [wrap]="false" [interval]="1000000">
+    <c-card class="h-100" style="padding: 0!important;margin: 0!important;">
+      <div *ngIf="!stats" style="padding: 20px;">
+        <div class="placeholder-glow">
+          <div class="placeholder col-4" style="height: 150px; float: left; margin-right: 20px;"></div>
+          <div class="placeholder col-7">
+            <div class="placeholder col-12"></div>
+            <div class="placeholder col-10"></div>
+            <div class="placeholder col-8"></div>
+          </div>
+        </div>
+      </div>
+      <c-carousel *ngIf="stats" [dark]="true" [animate]="false" [wrap]="false" [interval]="1000000">
         <c-carousel-indicators></c-carousel-indicators>
         <c-carousel-inner>
           <c-carousel-item style="display: flex;" *ngFor="let slide of stats['blog']; index as i;">

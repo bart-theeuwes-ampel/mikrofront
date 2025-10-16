@@ -10,14 +10,14 @@ import {
   SpinnerModule,
   ToastModule,
   ModalModule,
+  BadgeModule,
+  TooltipModule,
 } from "@coreui/angular";
 import { SettingsRoutingModule } from "./settings-routing.module";
 import { SettingsComponent } from "./settings.component";
 import { GuiGridModule } from "@generic-ui/ngx-grid";
 
 import { FormsModule } from "@angular/forms";
-import { MatSelectModule } from "@angular/material/select";
-import { NgxMatSelectSearchModule } from "ngx-mat-select-search";
 
 @NgModule({
   imports: [
@@ -30,11 +30,11 @@ import { NgxMatSelectSearchModule } from "ngx-mat-select-search";
     ButtonModule,
     ButtonGroupModule,
     GuiGridModule,
-    MatSelectModule,
-    NgxMatSelectSearchModule,
     SpinnerModule,
     ToastModule,
     ModalModule,
+    BadgeModule,
+    TooltipModule,
   ],
   declarations: [SettingsComponent],
 })

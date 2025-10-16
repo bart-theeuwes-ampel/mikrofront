@@ -318,7 +318,7 @@ export class SnippetsComponent implements OnInit, OnDestroy {
 
   initGridTable(): void {
     var _self = this;
-    _self.data_provider.get_snippets("", "", "", 0, 1000).then((res) => {
+    _self.data_provider.get_snippets("", "", "", 0, 1000,false).then((res) => {
       _self.source = res.map((x: any) => {
         x.created = [
           x.created.split("T")[0],

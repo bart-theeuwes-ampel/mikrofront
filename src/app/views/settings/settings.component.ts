@@ -37,6 +37,17 @@ export class SettingsComponent implements OnInit {
   public filters: any = {};
   public firms: any = {};
   public firmtodownload: any = {};
+  public activeTab: string = 'firmware';
+  
+  // Search functionality properties
+  public firmwareSearch: string = '';
+  public showFirmwareDropdown: boolean = false;
+  public filteredFirmwares: any[] = [];
+  
+  public timezoneSearch: string = '';
+  public showTimezoneDropdown: boolean = false;
+  public filteredTimezones: any[] = [];
+  
   constructor(
     private data_provider: dataProvider,
     private router: Router,
@@ -293,6 +304,12 @@ export class SettingsComponent implements OnInit {
       _self.sysconfigs["default_user"]["value"] = "";
       _self.sysconfigs["default_password"]["value"] = "";
       _self.timezones = _self.TimeZones.timezones;
+      _self.filteredTimezones = _self.TimeZones.timezones;
+      // Set initial timezone search display
+      const currentTz = _self.timezones.find((tz: any) => tz.utc[0] === _self.sysconfigs['timezone']['value']);
+      if (currentTz) {
+        _self.timezoneSearch = currentTz.text;
+      }
       _self.sysconfigs["force_syslog"]["value"] = /true/i.test(
         _self.sysconfigs["force_syslog"]["value"]
       );
@@ -309,6 +326,16 @@ export class SettingsComponent implements OnInit {
         _self.sysconfigs["otp_force"]["value"] = /true/i.test(
           _self.sysconfigs["otp_force"]["value"]
         );
+      }
+      if(_self.ispro && "proxy_auto_login" in _self.sysconfigs){
+        _self.sysconfigs["proxy_auto_login"]["value"] = /true/i.test(
+          _self.sysconfigs["proxy_auto_login"]["value"]
+        );
+      }
+      else if(_self.ispro){
+        _self.sysconfigs["proxy_auto_login"] = {
+          "value": true
+        }
       }
       //check if update_mode is in the sysconfigs
       if ("update_mode" in _self.sysconfigs){
@@ -335,7 +362,50 @@ export class SettingsComponent implements OnInit {
     this.data_provider.get_downloadable_firms().then((res) => {
       let index = 1;
       _self.firms = res.versions;
+      _self.filteredFirmwares = res.versions;
       _self.loading = false;
     });
+  }
+
+  // Firmware search methods
+  filterFirmwares(event: any): void {
+    const searchTerm = event.target.value.toLowerCase();
+    this.firmwareSearch = searchTerm;
+    this.filteredFirmwares = this.firms.filter((firm: string) => 
+      firm.toLowerCase().includes(searchTerm)
+    );
+  }
+
+  selectFirmware(firmware: string): void {
+    this.firmtodownload = firmware;
+    this.firmwareSearch = firmware;
+    this.showFirmwareDropdown = false;
+  }
+
+  hideFirmwareDropdown(): void {
+    setTimeout(() => {
+      this.showFirmwareDropdown = false;
+    }, 200);
+  }
+
+  // Timezone search methods
+  filterTimezones(event: any): void {
+    const searchTerm = event.target.value.toLowerCase();
+    this.timezoneSearch = searchTerm;
+    this.filteredTimezones = this.timezones.filter((tz: any) => 
+      tz.text.toLowerCase().includes(searchTerm)
+    );
+  }
+
+  selectTimezone(timezone: any): void {
+    this.sysconfigs['timezone']['value'] = timezone.utc[0];
+    this.timezoneSearch = timezone.text;
+    this.showTimezoneDropdown = false;
+  }
+
+  hideTimezoneDropdown(): void {
+    setTimeout(() => {
+      this.showTimezoneDropdown = false;
+    }, 200);
   }
 }

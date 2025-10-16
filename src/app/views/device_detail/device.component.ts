@@ -509,14 +509,16 @@ export class DeviceComponent implements OnInit, OnDestroy {
       // loop in dhcp_server_data and create a new object with the data for chart for each dhcp server
       _self.reloading = false;
       _self.dhcp_server_data.forEach((element:any) => {
-        var pooldata=element.pools[0];
-        element.chartpools = {
-          labels: ['Used', 'Free'],
-          datasets: [{
-            backgroundColor: [ '#E46651','#41B883'],
-            data: [pooldata.used_ips, pooldata.available_ips]
-          }]
-        };
+        if(element.pools.length>0){
+          var pooldata=element.pools[0];
+          element.chartpools = {
+            labels: ['Used', 'Free'],
+            datasets: [{
+              backgroundColor: [ '#E46651','#41B883'],
+              data: [pooldata.used_ips, pooldata.available_ips]
+            }]
+          };
+        }
       });
     });
   }
